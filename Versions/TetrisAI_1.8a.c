@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-const char* const INFO_AUTHOR = "iBug";
+const char* const INFO_AUTHOR = "GeForce GTX 982 Ti";
 const char* const INFO_VERSION = "1.8 a";
 
 
@@ -1492,7 +1492,7 @@ uint16_t getBestPlacing(const TetrisManager *manager)
         rotateLimit = 1;
         break;
     default:
-    	rotateLimit = 0;
+    	rotateLimit = 0; 
         break;
     }
 
@@ -1723,7 +1723,6 @@ signed long benchmarkRun(TetrisManager *manager, TetrisControl *control)
 
         keydownControl(manager, control, ' ');  // 移动好后，直接落地
     }
-    return 0;
 }
 
 inline double getTime(void)

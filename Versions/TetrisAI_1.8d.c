@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 const char* const INFO_AUTHOR = "GeForce GTX 982 Ti";
-const char* const INFO_VERSION = "1.8 b"; 
+const char* const INFO_VERSION = "1.8 d"; 
 
 
 // 方块形状
@@ -101,39 +101,112 @@ int8_t easterEgg[easterNum] = {0};
 // =============================================================================
 // 函数声明
 // 如果使用全局变量方式实现，就没必要传参了
-void initGame(TetrisManager *manager, TetrisControl *control, bool model);  // 初始化游戏
-void giveTetris(TetrisManager *manager, TetrisControl *control);  // 给一个方块
-bool checkCollision(const TetrisManager *manager);  // 碰撞检测
-void insertTetris(TetrisManager *manager);  // 插入方块
-void removeTetris(TetrisManager *manager);  // 移除方块
-void horzMoveTetris(TetrisManager *manager, TetrisControl *control);  // 水平移动方块
-void moveDownTetris(TetrisManager *manager, TetrisControl *control);  // 向下移动方块
-void rotateTetris(TetrisManager *manager, TetrisControl *control);  // 旋转方块
-void dropDownTetris(TetrisManager *manager, TetrisControl *control);  // 方块直接落地
-bool checkErasing(TetrisManager *manager, TetrisControl *control);  // 消行检测
-void keydownControl(TetrisManager *manager, TetrisControl *control, int key);  // 键按下
-void setPoolColor(const TetrisManager *manager, TetrisControl *control);  // 设置颜色
-void gotoxyWithFullwidth(short x, short y);  // 以全角定位到某点
-void gotoxyInPool(short x, short y); // 定位到游戏池 
-void printPoolBorder();  // 显示游戏池边界
-void printTetrisPool(const TetrisManager *manager, const TetrisControl *control);  // 显示游戏池
-void printCurrentTetris(const TetrisManager *manager, const TetrisControl *control);  // 显示当前方块
-void printNextTetris(const TetrisManager *manager);  // 显示下一个和下下一个方块
-void printScore(const TetrisManager *manager, const TetrisControl *control);  // 显示得分信息
-void runGame(TetrisManager *manager, TetrisControl *control);  // 运行游戏
-void printPrompting(const TetrisControl *control);  // 显示提示信息
-int mainMenu(void);  // 主菜单
 void autoRun(TetrisManager *manager, TetrisControl *control);  // 自动运行
-signed long benchmarkRun(TetrisManager *manager, TetrisControl *control);  // 跑分运行
+void benchmark(TetrisManager *manager, TetrisControl *control);  // 跑分运行
+signed long benchmarkRun(TetrisManager *manager, TetrisControl *control);  // 跑分核心 
 signed long calcFPS(void);  // 计算FPS，返回Benchmark模式下最大评分 
-void pause(void);  // 暂停 
+bool checkCollision(const TetrisManager *manager);  // 碰撞检测
+bool checkErasing(TetrisManager *manager, TetrisControl *control);  // 消行检测
 void clrscr(void);  // 清屏 
 double getTime(void);  // 高精度计时器 
+void dropDownTetris(TetrisManager *manager, TetrisControl *control);  // 方块直接落地
+bool enableDebugPrivilege();  // 尝试获取管理员权限 
+void giveTetris(TetrisManager *manager, TetrisControl *control);  // 给一个方块
+void gotoxyInPool(short x, short y); // 定位到游戏池 
+void gotoxyWithFullwidth(short x, short y);  // 以全角定位到某点
+void horzMoveTetris(TetrisManager *manager, TetrisControl *control);  // 水平移动方块
+void initGame(TetrisManager *manager, TetrisControl *control, bool model);  // 初始化游戏
+void insertTetris(TetrisManager *manager);  // 插入方块
+void keydownControl(TetrisManager *manager, TetrisControl *control, int key);  // 键按下
+int mainMenu(void);  // 主菜单
+void moveDownTetris(TetrisManager *manager, TetrisControl *control);  // 向下移动方块
+void pause(void);  // 暂停 
+void printCurrentTetris(const TetrisManager *manager, const TetrisControl *control);  // 显示当前方块
+void printNextTetris(const TetrisManager *manager);  // 显示下一个和下下一个方块
+void printPoolBorder();  // 显示游戏池边界
+void printPrompting(const TetrisControl *control);  // 显示提示信息
+void printScore(const TetrisManager *manager, const TetrisControl *control);  // 显示得分信息
+void printTetrisPool(const TetrisManager *manager, const TetrisControl *control);  // 显示游戏池
+void removeTetris(TetrisManager *manager);  // 移除方块
+void rotateTetris(TetrisManager *manager, TetrisControl *control);  // 旋转方块
+void runGame(TetrisManager *manager, TetrisControl *control);  // 运行游戏
+void setPoolColor(const TetrisManager *manager, TetrisControl *control);  // 设置颜色
 
 // =============================================================================
 // 主函数
 int main(int argc, char* argv[])
 {
+	// 如果程序运行时获得了更多参数 
+	if (argc > 1)
+	{
+		char optionEx[128]; 
+		for (int i = 1;i < argc;i++)
+		{
+			if (argv[i][0] == '/' || argv[i][0] == '-')
+			{
+				argv[i]++;
+				// 把参数转换成小写 
+				char *a = argv[i];
+				while (*a != '\0' && *a != ':')
+				{
+					if (*a >= 'A' && *a <= 'Z')
+					{
+						*a += 0x20;
+					}
+					a++;
+				}
+				if (*a == ':')
+				{
+					*a = '\0';
+					a++;
+					strcpy(optionEx, a);
+				}
+				else
+				{
+					memset(optionEx, 0, sizeof(optionEx));
+				}
+				
+				if (strcmp(argv[i], "c16") == 0)
+				{
+					easterEgg[1] = 1;
+				}
+				else if (strcmp(argv[i], "boost") == 0)
+				{
+					easterEgg[2] = 1;
+				}
+				else if (strcmp(argv[i], "fpsrate") == 0)
+				{
+					long newfps = atol(optionEx);
+					if (newfps > 0){
+						fpsRate = newfps;
+						if (fpsRate > 5000)
+						{
+							fpsRate = 5000;
+						}
+						easterEgg[3] = 1;
+					}
+				}
+				else if (strcmp(argv[i], "turbo") == 0)
+				{
+					enableDebugPrivilege(); 
+					HANDLE thisproc = GetCurrentProcess();
+					HANDLE thisthread = GetCurrentThread();
+					int procprio, threadprio;
+					procprio = REALTIME_PRIORITY_CLASS; 
+					threadprio = THREAD_PRIORITY_TIME_CRITICAL;
+					SetPriorityClass(thisproc, procprio);
+					SetThreadPriority(thisthread, threadprio);
+				}
+				else
+				{
+					printf("Error: Unknown command line option \"%s\"\n", argv[i]);
+					return 1; 
+				}
+			}
+		}
+	}
+	
+	// 初始化控制台窗口 
     TetrisManager tetrisManager;
     TetrisControl tetrisControl;
     g_hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);  // 获取控制台输出句柄
@@ -153,107 +226,6 @@ int main(int argc, char* argv[])
     SetConsoleTitleA(conTitle);
     
     DeleteMenu(GetSystemMenu(GetConsoleWindow(),0),SC_MAXIMIZE,MF_DISABLED);
-	
-	// 如果程序运行时获得了更多参数 
-	if (argc > 1 && (argv[1][0] == '/' || argv[1][0] == '-'))
-	{
-		argv[1]++;
-		// 把第一个参数转换成小写 
-		char *a = argv[1];
-		while (*a != '\0')
-		{
-			if (*a >= 'A' && *a <= 'Z')
-			{
-				*a += 0x20;
-			}
-			a++;
-		}
-		
-		if (strcmp(argv[1], "auto") == 0)
-		{
-			general.model = 1;
-			general.benchmark = 0; 
-    		
-        	SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
-        	clrscr(); 
-        	initGame(&tetrisManager, &tetrisControl, 0);  // 初始化游戏
-        	printPrompting(&tetrisControl);  // 显示提示信息
-        	printPoolBorder();  // 显示游戏池边界
-        	
-        	/*
-        	// 无视掉这些 
-        	int i,ax,ay;
-        	srand((unsigned)time(NULL)); 
-        	for (i = 0;i < 7;i++)
-        	{
-        		ax = rand() % 12 + 2;
-        		ay = 25 - rand() % 7;
-        		if (tetrisManager.pool[ay] & (1 << ax))
-        		{
-        			i--;
-        			continue;
-        		}
-        		tetrisManager.pool[ay] |= (1 << ax);
-        		tetrisControl.color[ay][ax] = 7;
-        	}
-        	printTetrisPool(&tetrisManager, &tetrisControl);
-    	    */
-        	
-       		Sleep(1000); // 缓冲 
-			autoRun(&tetrisManager, &tetrisControl);
-			return 0;
-		}
-		else if (strcmp(argv[1], "benchmark") == 0)
-		{
-			general.model = 1;
-			general.benchmark = 1;
-			easterEgg[2] = 1; 
-    		
-        	SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
-        	clrscr(); 
-        	initGame(&tetrisManager, &tetrisControl, 0);  // 初始化游戏
-        	printPrompting(&tetrisControl);  // 显示提示信息
-        	printPoolBorder();  // 显示游戏池边界
-			signed long mark = benchmarkRun(&tetrisManager, &tetrisControl);
-			
-			clrscr();
-		    SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
-    		gotoxyWithFullwidth(14, 5);
-    		printf("┏━━━━━━━━━━┓");
-    		gotoxyWithFullwidth(14, 6);
-    		printf("┃%3s%s%3s┃", "", "高能俄罗斯方块", "");
-    		gotoxyWithFullwidth(14, 7);
-    		printf("┃%6s%s%6s┃", "", "跑分模式", "");
-    		gotoxyWithFullwidth(14, 8);
-    		printf("┗━━━━━━━━━━┛");
-    		gotoxyWithFullwidth(14, 9);
-			printf("作者：%s", INFO_AUTHOR); 
-    		gotoxyWithFullwidth(15, 11);
-			printf("你的电脑评分：%d", mark);
-			pause();
-			return 0;
-		}
-		else if (strcmp(argv[1], "power") == 0)
-		{
-			easterEgg[0] = 1;
-		}
-		else if (strcmp(argv[1], "fpsrate") == 0)
-		{
-			if (argc < 3)
-			{
-				return -1;
-			}
-			long newfps = atol(argv[2]);
-			if (newfps > 0){
-				fpsRate = newfps;
-				if (fpsRate > 5000)
-				{
-					fpsRate = 5000;
-				}
-				easterEgg[3] = 1;
-			}
-		}
-	}
 	
     do
     {
@@ -306,7 +278,8 @@ int main(int argc, char* argv[])
     		gotoxyWithFullwidth(14, 9);
 			printf("作者：%s", INFO_AUTHOR); 
     		gotoxyWithFullwidth(15, 11);
-			printf("你的电脑评分：%d", mark);
+			printf("你的电脑评分：%6d", mark);
+			
 			pause();
 			easterEgg[2] = prevEE2;
 			continue; 
@@ -376,15 +349,25 @@ void initGame(TetrisManager *manager, TetrisControl *control, bool model)
 // 给一个方块
 void giveTetris(TetrisManager *manager, TetrisControl *control)
 {
-    uint16_t tetris;
-
+    static uint16_t tetris;
+	static uint16_t num;
+	
     manager->type[0] = manager->type[1];  // 下一个方块置为当前
     manager->orientation[0] = manager->orientation[1];
 
     manager->type[1] = manager->type[2];// 下下一个置方块为下一个
     manager->orientation[1] = manager->orientation[2];
-
-    manager->type[2] = rand() % 7;// 随机生成下下一个方块
+	
+	// 动点手脚，让I形数量稍微多一些 
+	num = rand();
+	if (num >= 32200)
+	{
+		manager->type[2] = 0;// 动些手脚 
+	}
+	else
+	{
+    	manager->type[2] = rand() % 7;// 随机生成下下一个方块
+    }
     if (general.benchmark)
     {
     	manager->type[2] = (manager->type[1] + 1) % 7;
@@ -638,7 +621,7 @@ bool checkErasing(TetrisManager *manager, TetrisControl *control)
 	
 	lowest--;
     control->erasedTotal += count;  // 消行总数
-    control->score += scores[count] + lowest * scoreRatios[count];  // 得分
+    control->score += scores[count] + lowest * scoreRatios[count] + 1;  // 得分
 
     if (count > 0)
     {
@@ -1469,7 +1452,7 @@ int calcStatus(const TetrisManager *manager)
 
 // =============================================================================
 // 估值
-int evaluate(TetrisManager *manager)
+inline int evaluate(TetrisManager *manager)
 {
     putDownTetris(manager);  // 将方块落到底
 
@@ -1696,8 +1679,6 @@ signed long benchmarkRun(TetrisManager *manager, TetrisControl *control)
             {
             case 27: // Esc键
                 return mark < 0 ? -mark : mark;
-            default:
-				break; 
             }
         }
 
@@ -1775,12 +1756,7 @@ inline signed long calcFPS(void)
 		mark = (unsigned long)(totalFramesElapsed * 100000.0 / (lastRecordedTime - general.startTime));
     	
     	SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
-    	if (fraps > 999.8)
-    	{
-			gotoxyWithFullwidth(32, 21);
-    		printf("Maxed Out!");
-    	}
-    	else if (general.benchmark)
+    	if (general.benchmark)
     	{
 			gotoxyWithFullwidth(32, 20);
     		printf("%6u%4s", mark, "");
@@ -1806,6 +1782,12 @@ inline signed long calcFPS(void)
     				return -(signed long)markMaxLesser; // 终止Benchmark模式的信号 
     			}
     		}
+    	}
+    	else if (fraps > 999.48)
+    	{
+    		SetConsoleTextAttribute(g_hConsoleOutput, 0x0C);
+			gotoxyWithFullwidth(32, 21);
+    		printf("Maxed Out!");
     	}
 		else
 		{
@@ -1841,3 +1823,27 @@ inline void clrscr(void){
 	SetConsoleCursorPosition(g_hConsoleOutput,startPos);
 }
 
+bool enableDebugPrivilege()
+{   
+    HANDLE hToken;   
+    LUID sedebugnameValue;   
+    TOKEN_PRIVILEGES tkp;   
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+    {   
+        return false;   
+    }   
+    if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &sedebugnameValue))  
+    {   
+        CloseHandle(hToken);   
+        return false;   
+    }   
+    tkp.PrivilegeCount = 1;   
+    tkp.Privileges[0].Luid = sedebugnameValue;   
+    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;   
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tkp, sizeof(tkp), NULL, NULL)) 
+    {   
+        CloseHandle(hToken);   
+        return false;   
+    }   
+    return true;   
+}

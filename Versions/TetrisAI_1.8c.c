@@ -1469,6 +1469,7 @@ uint16_t getBestPlacing(const TetrisManager *manager)
         rotateLimit = 1;
         break;
     default:
+        rotateLimit = 0;
         break;
     }
 
