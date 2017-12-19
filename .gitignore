@@ -1,3 +1,6 @@
+# Compiled resources
+*.res
+
 # Prerequisites
 *.d
 
