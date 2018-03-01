@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 const char* const INFO_AUTHOR = "GeForce GTX TITAN X";
-const char* const INFO_VERSION = "1.9 a"; 
+const char* const INFO_VERSION = "1.10 a"; 
 
 
 // 方块形状
@@ -111,27 +111,45 @@ bool checkErasing(TetrisManager *manager, TetrisControl *control);  // 消行检测
 void clrscr(void);  // 清屏 
 double getTime(void);  // 高精度计时器 
 void dropDownTetris(TetrisManager *manager, TetrisControl *control);  // 方块直接落地
-bool enableDebugPrivilege();  // 尝试获取管理员权限 
+bool enableDebugPrivilege();  // 尝试获取管理员权限
+void flushPrint();  // 刷新输出 
 void giveTetris(TetrisManager *manager, TetrisControl *control);  // 给一个方块
 void gotoxyInPool(short x, short y); // 定位到游戏池 
 void gotoxyWithFullwidth(short x, short y);  // 以全角定位到某点
-void horzMoveTetris(TetrisManager *manager, TetrisControl *control);  // 水平移动方块
+bool horzMoveTetris(TetrisManager *manager, TetrisControl *control);  // 水平移动方块
 void initGame(TetrisManager *manager, TetrisControl *control, bool model);  // 初始化游戏
 void insertTetris(TetrisManager *manager);  // 插入方块
-void keydownControl(TetrisManager *manager, TetrisControl *control, int key);  // 键按下
+bool keydownControl(TetrisManager *manager, TetrisControl *control, int key);  // 键按下
 int mainMenu(void);  // 主菜单
-void moveDownTetris(TetrisManager *manager, TetrisControl *control);  // 向下移动方块
+bool moveDownTetris(TetrisManager *manager, TetrisControl *control);  // 向下移动方块
 void pause(void);  // 暂停 
 void printCurrentTetris(const TetrisManager *manager, const TetrisControl *control);  // 显示当前方块
 void printNextTetris(const TetrisManager *manager);  // 显示下一个和下下一个方块
 void printPoolBorder();  // 显示游戏池边界
 void printPrompting(const TetrisControl *control);  // 显示提示信息
 void printScore(const TetrisManager *manager, const TetrisControl *control);  // 显示得分信息
-void printTetrisPool(const TetrisManager *manager, const TetrisControl *control);  // 显示游戏池
+void printTetrisPool(const TetrisManager *manager, const TetrisControl *control);  // 显示游戏池 
 void removeTetris(TetrisManager *manager);  // 移除方块
-void rotateTetris(TetrisManager *manager, TetrisControl *control);  // 旋转方块
+bool rotateTetris(TetrisManager *manager, TetrisControl *control);  // 旋转方块
 void runGame(TetrisManager *manager, TetrisControl *control);  // 运行游戏
 void setPoolColor(const TetrisManager *manager, TetrisControl *control);  // 设置颜色
+
+// =============================================================================
+// 优化第二弹：缓冲刷新式输出 
+CHAR_INFO outputBuffer[25][80];
+const SMALL_RECT outputRegion = {0, 0, 79, 24};
+const COORD outputBufferSize = {80, 25}, zeroPosition = {0, 0};
+COORD outputCursorPosition = {0, 0};  // 替代控制台光标
+WORD outputAttribute = 0x07;  // 替代控制台文字颜色 
+void IncrementOutputCursorPosition();
+
+char charBuf[128];
+#define buffer_printf(args...) {snprintf(charBuf, sizeof(charBuf), args);buffer_print(charBuf);}
+void buffer_SetConsoleCursorPosition(HANDLE, COORD Pos);
+void buffer_SetConsoleTextAttribute(HANDLE, WORD Attribute);
+void buffer_print(LPCSTR String); 
+
+
 
 // =============================================================================
 // 主函数
@@ -229,14 +247,14 @@ int main(int argc, char* argv[])
 	clrscr();
 	
     SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);  // 设置光标隐藏
-    char conTitle[64] = {0};
-    snprintf(conTitle, sizeof(conTitle), "高能俄罗斯方块Ver %s",INFO_VERSION);
-    SetConsoleTitleA(conTitle);
+    snprintf(charBuf, sizeof(charBuf), "高能俄罗斯方块Ver %s", INFO_VERSION);
+    SetConsoleTitleA(charBuf);
     
-    DeleteMenu(GetSystemMenu(GetConsoleWindow(),0),SC_MAXIMIZE,MF_DISABLED);
+    DeleteMenu(GetSystemMenu(GetConsoleWindow(), 0), SC_MAXIMIZE, MF_DISABLED);
 	
     do
     {
+    	general.model = 0;
         general.model = mainMenu();
         if (general.model != 2)
         {
@@ -246,7 +264,7 @@ int main(int argc, char* argv[])
         {
         	general.benchmark = 1;
         }
-        SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
+        buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
         clrscr(); 
         initGame(&tetrisManager, &tetrisControl, general.model == 0);  // 初始化游戏
         printPrompting(&tetrisControl);  // 显示提示信息
@@ -266,7 +284,7 @@ int main(int argc, char* argv[])
         	prevEE2 = easterEgg[2];
 			easterEgg[2] = 1; 
     		
-        	SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
+        	buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
         	clrscr(); 
         	initGame(&tetrisManager, &tetrisControl, 0);  // 初始化游戏
         	printPrompting(&tetrisControl);  // 显示提示信息
@@ -274,20 +292,22 @@ int main(int argc, char* argv[])
 			signed long mark = benchmarkRun(&tetrisManager, &tetrisControl);
 			
 			clrscr();
-		    SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
+		    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
     		gotoxyWithFullwidth(14, 5);
-    		printf("┏━━━━━━━━━━┓");
+    		buffer_print("┏━━━━━━━━━━┓");
     		gotoxyWithFullwidth(14, 6);
-    		printf("┃%3s%s%3s┃", "", "高能俄罗斯方块", "");
+    		buffer_print("┃   高能俄罗斯方块   ┃");
     		gotoxyWithFullwidth(14, 7);
-    		printf("┃%6s%s%6s┃", "", "跑分模式", "");
+    		buffer_print("┃      跑分模式      ┃");
     		gotoxyWithFullwidth(14, 8);
-    		printf("┗━━━━━━━━━━┛");
+    		buffer_print("┗━━━━━━━━━━┛");
     		gotoxyWithFullwidth(14, 9);
-			printf("作者：%s", INFO_AUTHOR); 
+			buffer_printf("作者：%s", INFO_AUTHOR); 
     		gotoxyWithFullwidth(15, 11);
-			printf("你的电脑评分：%6d", mark);
+			buffer_print("你的电脑评分：");
+			buffer_printf("%6d", mark);
 			
+			flushPrint();
 			pause();
 			easterEgg[2] = prevEE2;
 			continue; 
@@ -296,21 +316,22 @@ int main(int argc, char* argv[])
 			return -1; 
         }
 
-        SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
+        buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
         gotoxyWithFullwidth(12, 9);
-		printf("%20s\n","");
+		buffer_print("                    \n");
         gotoxyWithFullwidth(12, 10);
-        printf("%2s%s%2s\n","",easterEgg[1] ? " 谢文皓喜欢叶子 " : "按任意键回主菜单","");
+        buffer_print(easterEgg[1] ? "   谢文皓喜欢叶子   " : "  按任意键回主菜单  ");
         gotoxyWithFullwidth(12, 11);
-		printf("%20s\n","");
-        SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
+		buffer_print("                    \n");
+        buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x07);
+        flushPrint();
         pause();
         clrscr(); 
 
     } while (1);
 
     gotoxyWithFullwidth(0, 0);
-    CloseHandle(g_hConsoleOutput);
+    // CloseHandle(g_hConsoleOutput);
     return 0;
 }
 
@@ -350,7 +371,6 @@ void initGame(TetrisManager *manager, TetrisControl *control, bool model)
     printTetrisPool(manager, control);  // 清空Sync方法的备份数据 
     general.startTime = getTime();
     general.resetFpsCounter = true;
-    calcFPS();
 }
 
 // =============================================================================
@@ -505,7 +525,7 @@ void setPoolColor(const TetrisManager *manager, TetrisControl *control)
 
 // =============================================================================
 // 旋转方块
-void rotateTetris(TetrisManager *manager, TetrisControl *control)
+bool rotateTetris(TetrisManager *manager, TetrisControl *control)
 {
     int8_t ori = manager->orientation[0];  // 记录原旋转状态
 
@@ -518,6 +538,7 @@ void rotateTetris(TetrisManager *manager, TetrisControl *control)
     {
         manager->orientation[0] = ori;  // 恢复为原旋转状态
         insertTetris(manager);  // 放入当前方块。由于状态没改变，不需要设置颜色
+        return false;
     }
     else
     {
@@ -527,12 +548,13 @@ void rotateTetris(TetrisManager *manager, TetrisControl *control)
         {
         	printCurrentTetris(manager, control);  // 显示当前方块
         }
+        return true;
     }
 }
 
 // =============================================================================
 // 水平移动方块
-void horzMoveTetris(TetrisManager *manager, TetrisControl *control)
+bool horzMoveTetris(TetrisManager *manager, TetrisControl *control)
 {
     int x = manager->x;  // 记录原列位置
 
@@ -543,6 +565,7 @@ void horzMoveTetris(TetrisManager *manager, TetrisControl *control)
     {
         manager->x = x;  // 恢复为原列位置
         insertTetris(manager);  // 放入当前方块。由于位置没改变，不需要设置颜色
+        return false;
     }
     else
     {
@@ -552,12 +575,13 @@ void horzMoveTetris(TetrisManager *manager, TetrisControl *control)
         {
         	printCurrentTetris(manager, control);  // 显示当前方块
         }
+        return true;
     }
 }
 
 // =============================================================================
 // 向下移动方块
-void moveDownTetris(TetrisManager *manager, TetrisControl *control)
+bool moveDownTetris(TetrisManager *manager, TetrisControl *control)
 {
     int8_t y = manager->y;  // 记录原行位置
 
@@ -573,16 +597,17 @@ void moveDownTetris(TetrisManager *manager, TetrisControl *control)
 			if (control->frameRate > 0)
 			{
 				Sleep(2 * control->frameRate);
-    			calcFPS();  // 为了保证FPS的准确率 
 			}
             printTetrisPool(manager, control);  // 显示游戏池
         }
+        return false;
     }
     else
     {
         insertTetris(manager);  // 放入当前方块
         setPoolColor(manager, control);  // 设置颜色
         printCurrentTetris(manager, control);  // 显示当前方块
+        return true;
     }
 }
 
@@ -607,12 +632,10 @@ void dropDownTetris(TetrisManager *manager, TetrisControl *control)
     setPoolColor(manager, control);  // 设置颜色
 
     printTetrisPool(manager, control);  // 先显示游戏池
-    calcFPS();
     if (checkErasing(manager, control) && control->frameRate > 0)  // 检测消行并缓冲 
 	{
 		Sleep(2 * control->frameRate);
     	printTetrisPool(manager, control);  // 再显示一遍游戏池
-    	calcFPS();  // 为了保证FPS的准确率 
 	}
 }
 
@@ -663,19 +686,16 @@ bool checkErasing(TetrisManager *manager, TetrisControl *control)
 
 // =============================================================================
 // 键按下
-void keydownControl(TetrisManager *manager, TetrisControl *control, int key)
+bool keydownControl(TetrisManager *manager, TetrisControl *control, int key)
 {
 	static signed char lastAction;
-	// if (general.model == 1)
-	// {
-		calcFPS();
-	// }
+	static bool ret = false;
 	
 	if (general.model == 0 && lastAction >= 0)
 	{
 		gotoxyWithFullwidth(27, 10 + lastAction);
-		SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
-		printf("□");
+		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+		buffer_print("□");
 	}
 	
     if (key == 13)  // 暂停/解除暂停
@@ -685,20 +705,20 @@ void keydownControl(TetrisManager *manager, TetrisControl *control, int key)
         control->pause = !control->pause;
         
         gotoxyWithFullwidth(27, 10 + lastAction);
-		SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
 		if(control->pause)
 		{
-			printf("■");
+			buffer_print("■");
 		}
 		else
 		{
-			printf("□");
+			buffer_print("□");
 		}
     }
 
     if (control->pause)  // 暂停状态，不作处理
     {
-        return;
+        return false;
     }
 
     switch (key)
@@ -706,30 +726,31 @@ void keydownControl(TetrisManager *manager, TetrisControl *control, int key)
     case 'w': case 'W': case 72:  // 上
     	lastAction = 3;
         control->clockwise = true;  // 顺时针旋转
-        rotateTetris(manager, control);  // 旋转方块
+        ret = rotateTetris(manager, control);  // 旋转方块
         break;
     case 'a': case 'A': case 75:  // 左
     	lastAction = 0;
         control->direction = 0;  // 向左移动
-        horzMoveTetris(manager, control);  // 水平移动方块
+        ret = horzMoveTetris(manager, control);  // 水平移动方块
         break;
     case 'd': case 'D': case 77:  // 右
     	lastAction = 1;
         control->direction = 1;  // 向右移动
-        horzMoveTetris(manager, control);  // 水平移动方块
+        ret = horzMoveTetris(manager, control);  // 水平移动方块
         break;
     case 's': case 'S': case 80:  // 下
     	lastAction = 2;
-        moveDownTetris(manager, control);  // 向下移动方块
+        ret = moveDownTetris(manager, control);  // 向下移动方块
         break;
     case ' ':  // 直接落地
     	lastAction = 5;
         dropDownTetris(manager, control);
+        ret = true;
         break;
     case 'x': case 'X': case '0':  // 反转
     	lastAction = 4;
         control->clockwise = false;  // 逆时针旋转
-        rotateTetris(manager, control);  // 旋转方块
+        ret = rotateTetris(manager, control);  // 旋转方块
         break;
     default:
     	lastAction = -1;
@@ -739,9 +760,10 @@ void keydownControl(TetrisManager *manager, TetrisControl *control, int key)
     if (general.model == 0 && lastAction >= 0)
 	{
     	gotoxyWithFullwidth(27, 10 + lastAction);
-		SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
-		printf("■");
+		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+		buffer_print("■");
 	}
+	return ret;
 }
 
 // =============================================================================
@@ -752,7 +774,7 @@ inline void gotoxyWithFullwidth(short x, short y)
 
     cd.X = (short)(x << 1);
     cd.Y = y;
-    SetConsoleCursorPosition(g_hConsoleOutput, cd);
+    buffer_SetConsoleCursorPosition(g_hConsoleOutput, cd);
 }
 
 // =============================================================================
@@ -770,33 +792,32 @@ int mainMenu()
     static char secretKey[1024];
     signed long int index = 0, secretIndex = 0, ch;
     
-    SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
     gotoxyWithFullwidth(14, 5);
-    printf("┏━━━━━━━━━━┓");
+    buffer_print("┏━━━━━━━━━━┓");
     gotoxyWithFullwidth(14, 6);
-    printf("┃%3s%s%3s┃", "", "高能俄罗斯方块", "");
+    buffer_print("┃   高能俄罗斯方块   ┃");
     gotoxyWithFullwidth(14, 7);
-    printf("┃%3sVersion: %s", "", INFO_VERSION);
+    buffer_printf("┃   Version: %s", INFO_VERSION);
     gotoxyWithFullwidth(25, 7);
-    printf("┃");
+    buffer_print("┃");
     gotoxyWithFullwidth(14, 8);
-    printf("┗━━━━━━━━━━┛");
+    buffer_print("┗━━━━━━━━━━┛");
 	gotoxyWithFullwidth(14, 9);
-	printf("作者：%s", INFO_AUTHOR); 
+	buffer_printf("作者：%s", INFO_AUTHOR); 
 	
-    SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
 	for (int i = 0;i < indexTotal;i++)
 	{
     	gotoxyWithFullwidth(14, 14 + 2 * i);
-    	printf("%2s%s%2s", "", modelItem[i], "");
-    	SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
+        buffer_printf("%2s%s%2s", "", modelItem[i], "");
+    	buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
     }
     
-    do
-    {
+    do{
+    	flushPrint();
         ch = _getch();
-        switch (ch)
-        {
+        switch (ch){
         /* 
         // 为了SecretCode只能先这样 
         case 'w': case 'W': case '8': case 72:  // 上
@@ -808,9 +829,9 @@ int mainMenu()
         //===========================================
         case 72: case 75:  // 上左 
 		case 77: case 80:  // 右下 
-            SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
+            buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0F);
             gotoxyWithFullwidth(14, 14 + 2 * index);
-            printf("%2s%s%2s", "", modelItem[index], "");
+            buffer_printf("%2s%s%2s", "", modelItem[index], "");
 			if (ch == 72 || ch == 75)
 			{
                 index--;
@@ -827,9 +848,10 @@ int mainMenu()
 					index -= indexTotal;
 				}
             }
-            SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
+            buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
             gotoxyWithFullwidth(14, 14 + 2 * index);
-            printf("%2s%s%2s", "", modelItem[index], "");
+            buffer_printf("%2s%s%2s", "", modelItem[index], "");
+            flushPrint();
             break;
         case ' ': case 13:  // 空格和Enter 
             return index;
@@ -871,17 +893,18 @@ void printPoolBorder()
 {
     int8_t y;
 
-    SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xF0);
     for (y = ROW_BEGIN; y < ROW_END; ++y)  // 不显示顶部4行和底部2行
     {
         gotoxyWithFullwidth(10, y - 3);
-        printf("%2s", "");
+        buffer_print("  ");
         gotoxyWithFullwidth(23, y - 3);
-        printf("%2s", "");
+        buffer_print("  ");
     }
 
     gotoxyWithFullwidth(10, y - 3);  // 底部边界
-    printf("%28s", "");
+    buffer_print("                            ");
+    flushPrint();
 }
 
 // 定位到游戏池中的方格
@@ -909,8 +932,8 @@ void printTetrisPool(const TetrisManager *manager, const TetrisControl *control)
         		if (control->color[y][x] == ppool[x][y])continue; // 方块未变化则跳过 
                 // 用相应颜色，显示一个实心方块
 				gotoxyInPool(x, y);
-                SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
-                printf("■");
+                buffer_SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
+                buffer_print("■");
                 ppool[x][y] = control->color[y][x];
             }
             else  // 没有方块，显示空白
@@ -918,11 +941,12 @@ void printTetrisPool(const TetrisManager *manager, const TetrisControl *control)
 				if (ppool[x][y] == 0)continue; 
                 // 多余SetConsoleTextAttribute(g_hConsoleOutput, 0);
 				gotoxyInPool(x, y);
-                printf("%2s", "");
+                buffer_print("  ");
                 ppool[x][y] = 0;
             }
         }
     }
+    flushPrint();
 }
 
 // =============================================================================
@@ -943,8 +967,8 @@ void printCurrentTetris(const TetrisManager *manager, const TetrisControl *contr
             if ((manager->pool[y] >> x) & 1)  // 游戏池该方格有方块
             {
                 // 用相应颜色，显示一个实心方块
-                SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
-                printf("■");
+                buffer_SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
+                buffer_print("■");
                 ppool[x][y] = control->color[y][x];
                 
             }
@@ -952,11 +976,12 @@ void printCurrentTetris(const TetrisManager *manager, const TetrisControl *contr
             {
             	if (ppool[x][y] == 0)continue;
                 // 多余SetConsoleTextAttribute(g_hConsoleOutput, 0);
-                printf("%2s", "");
+                buffer_print("  ");
                 ppool[x][y] = 0;
             }
         }
     }
+    flushPrint();
 }
 
 // =============================================================================
@@ -969,11 +994,11 @@ void printNextTetris(const TetrisManager *manager)
 
     // 下一个，用相应颜色显示
     tetris = gs_uTetrisTable[manager->type[1]][manager->orientation[1]];
-    SetConsoleTextAttribute(g_hConsoleOutput, manager->type[1] | 8);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, manager->type[1] | 8);
     for (i = 0; i < 16; ++i)
     {
         gotoxyWithFullwidth((i & 3) + 27, (i >> 2) + 2);
-        ((tetris >> i) & 1) ? printf("■") : printf("%2s", "");
+        ((tetris >> i) & 1) ? buffer_print("■") : buffer_print("  ");
     }
 	
 	if (general.benchmark)
@@ -985,11 +1010,11 @@ void printNextTetris(const TetrisManager *manager)
 	{
     // 下下一个，不显示彩色
     	tetris = gs_uTetrisTable[manager->type[2]][manager->orientation[2]];
-    	SetConsoleTextAttribute(g_hConsoleOutput, 8);
+    	buffer_SetConsoleTextAttribute(g_hConsoleOutput, 8);
     	for (i = 0; i < 16; ++i)
     	{
     	    gotoxyWithFullwidth((i & 3) + 32, (i >> 2) + 2);
-    	    ((tetris >> i) & 1) ? printf("■") : printf("%2s", "");
+    	    ((tetris >> i) & 1) ? buffer_print("■") : buffer_print("  ");
     	}
     }
 }
@@ -998,52 +1023,28 @@ void printNextTetris(const TetrisManager *manager)
 // 显示得分信息
 void printScore(const TetrisManager *manager, const TetrisControl *control)
 {
-	static TetrisControl sync; // 高效率NVIDIA G-Sync实现方法回来了！
-	static bool flag; 
     int8_t i;
 
-    SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
 	
-	if (control->score != sync.score)
-	{ 
-    	gotoxyWithFullwidth(5, 6);
-    	printf("%u", control->score);
-    }
+    gotoxyWithFullwidth(5, 6);
+    buffer_printf("%u", control->score);
 	
-	flag = false;
     for (i = 0; i < 4; ++i)
     {
-    	if (control->erasedCount[i] != sync.erasedCount[i])
-    	{
-        	gotoxyWithFullwidth(6, 10 + i);
-        	printf("%u", control->erasedCount[i]);
-        	flag = true;
-        }
+        gotoxyWithFullwidth(6, 10 + i);
+    	buffer_printf("%u", control->erasedCount[i]);
     }
-    if (flag)
-    {
-    	gotoxyWithFullwidth(7, 8);
-    	printf("%u", control->erasedTotal);
-    }
+    gotoxyWithFullwidth(7, 8);
+    buffer_printf("%u", control->erasedTotal);
 	
-	flag = false;
     for (i = 0; i < 7; ++i)
     {
-    	if (control->tetrisCount[i] != sync.tetrisCount[i])
-    	{
-        	gotoxyWithFullwidth(6, 17 + i);
-        	printf("%u", control->tetrisCount[i]);
-        	flag = true;
-        }
+        gotoxyWithFullwidth(6, 17 + i);
+    	buffer_printf("%u", control->tetrisCount[i]);
     }
-    if (flag)
-    {
-    	gotoxyWithFullwidth(7, 15);
-		printf("%u", control->tetrisTotal);
-	}
-    
-    
-	sync = *control;
+    gotoxyWithFullwidth(7, 15);
+    buffer_printf("%u", control->tetrisTotal);
 }
 
 // =============================================================================
@@ -1054,139 +1055,144 @@ void printPrompting(const TetrisControl *control)
 	static const char* const modelName[] = {"自己动手垃圾尝试", "显卡先生神迹再现"};
 	static const char* const easterEggName = "大师向泽来耍淫威";
     static const char* const tetrisName = "ITLJZSO";
-    SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
     
     gotoxyWithFullwidth(1, 1);
     if (general.benchmark)
     {
-    	printf("■Benchmark跑分");
+    	buffer_print("■Benchmark跑分");
     }
     else
     {
     	if (easterEgg[0])
 		{
-    		SetConsoleTextAttribute(g_hConsoleOutput, 0x0C);
-			printf("■%s", easterEggName);
-    		SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
+    		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0C);
+			buffer_print("■%s");
+			buffer_print(easterEggName);
+    		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0E);
 		}
-    	printf("■%s", control->model ? modelName[0] : modelName[1]);
+    	buffer_print("■");
+		buffer_print(control->model ? modelName[0] : modelName[1]);
     }
     gotoxyWithFullwidth(1, 3);
-    printf("□按Esc回主菜单");
+    buffer_print("□按Esc回主菜单");
     
     gotoxyWithFullwidth(1, 6);
-    printf("■得分：%u", control->score);
+    buffer_print("■得分：");
+    buffer_printf("%u", control->score);
     gotoxyWithFullwidth(1, 8);
-    printf("■消行总数：%u", control->erasedTotal);
+    buffer_print("■消行总数：");
+    buffer_printf("%u", control->erasedTotal);
     
     int8_t i;
     for (i = 0; i < 4; ++i)
     {
         gotoxyWithFullwidth(2, 10 + i);
-        printf("□消%1s%d：%u", "", i + 1, control->erasedCount[i]);
+        buffer_printf("□消%1s%d：%u", "", i + 1, control->erasedCount[i]);
     }
     gotoxyWithFullwidth(1, 15);
-    printf("■方块总数：%u", control->tetrisTotal);
+    buffer_printf("■方块总数：%u", control->tetrisTotal);
     
     for (i = 0; i < 7; ++i)
     {
         gotoxyWithFullwidth(2, 17 + i);
-        printf("□%1s%c形：%u", "", tetrisName[i], control->tetrisCount[i]);
+        buffer_printf("□%1s%c形：%u", "", tetrisName[i], control->tetrisCount[i]);
     }
     
     // 下一个方块的边框
-    SetConsoleTextAttribute(g_hConsoleOutput, 0xF);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xF);
     if (general.benchmark)
 	{
 		// Benchmark跑分模式不显示下面两个 
     	gotoxyWithFullwidth(26, 1);
-    	printf("┏━━━━┓");
+    	buffer_print("┏━━━━┓");
     	gotoxyWithFullwidth(26, 2);
-    	printf("┃%8s┃", "");
+    	buffer_print("┃        ┃");
     	gotoxyWithFullwidth(26, 3);
-    	printf("┃%8s┃", "");
+    	buffer_print("┃        ┃");
     	gotoxyWithFullwidth(26, 4);
-    	printf("┃%8s┃", "");
+    	buffer_print("┃        ┃");
     	gotoxyWithFullwidth(26, 5);
-    	printf("┃%8s┃", "");
+    	buffer_print("┃        ┃");
     	gotoxyWithFullwidth(26, 6);
-    	printf("┗━━━━┛");	
+    	buffer_print("┗━━━━┛");	
 	}
 	else
 	{
     	gotoxyWithFullwidth(26, 1);
-    	printf("┏━━━━┳━━━━┓");
+    	buffer_print("┏━━━━┳━━━━┓");
     	gotoxyWithFullwidth(26, 2);
-    	printf("┃%8s┃%8s┃", "", "");
+    	buffer_print("┃        ┃        ┃");
     	gotoxyWithFullwidth(26, 3);
-    	printf("┃%8s┃%8s┃", "", "");
+    	buffer_print("┃        ┃        ┃");
     	gotoxyWithFullwidth(26, 4);
-    	printf("┃%8s┃%8s┃", "", "");
+    	buffer_print("┃        ┃        ┃");
     	gotoxyWithFullwidth(26, 5);
-    	printf("┃%8s┃%8s┃", "", "");
+    	buffer_print("┃        ┃        ┃");
     	gotoxyWithFullwidth(26, 6);
-    	printf("┗━━━━┻━━━━┛");
+    	buffer_print("┗━━━━┻━━━━┛");
     }
     
-    SetConsoleTextAttribute(g_hConsoleOutput, 0xB);
+    buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0xB);
     if (!control->model) // AI运行模式 
     {
     
     	if (general.benchmark)
 		{ 
     		gotoxyWithFullwidth(26, 8);
-    		printf("■跑分模式：");
+    		buffer_print("■跑分模式：");
     		gotoxyWithFullwidth(27, 10);
-    		printf("□退出：Esc");
+    		buffer_print("□退出：Esc");
     		
-    		SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+    		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
     		gotoxyWithFullwidth(26, 20);
-    		printf("■当前评分：%6u", 100 * (unsigned)0.0);
+    		buffer_printf("■当前评分：%6u", 100 * (unsigned)0.0);
     		gotoxyWithFullwidth(26, 21);
-    		printf("■电脑评分：%6u", 100 * (unsigned)0.0);
+    		buffer_printf("■电脑评分：%6u", 100 * (unsigned)0.0);
     	}
     	else
     	{
     		gotoxyWithFullwidth(26, 8);
-    		printf("■观看模式：");
+    		buffer_print("■观看模式：");
     		gotoxyWithFullwidth(27, 10);
-    		printf("□加速：↑ W +");
+    		buffer_print("□加速：↑ W +");
     		gotoxyWithFullwidth(27, 11);
-    		printf("□减速：↓ S -");
+    		buffer_print("□减速：↓ S -");
     		gotoxyWithFullwidth(27, 12);
-    		printf("□暂停：Space Enter");
+    		buffer_print("□暂停：Space Enter");
     		gotoxyWithFullwidth(27, 13);
-    		printf("□退出：Esc");
+    		buffer_print("□退出：Esc");
     		
     		gotoxyWithFullwidth(26, 21);
-    		SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
-    		printf("■实时帧频：%6.2lf fps", 0.0);
+    		buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+    		buffer_printf("■实时帧频：%6.2lf fps", 0.0);
     	}
     }
     else
     {
     	gotoxyWithFullwidth(26, 8);
-    	printf("■游戏模式：");
+    	buffer_print("■游戏模式：");
     	gotoxyWithFullwidth(27, 10);
-    	printf("□向左移动：← A 4");
+    	buffer_print("□向左移动：← A 4");
     	gotoxyWithFullwidth(27, 11);
-    	printf("□向右移动：→ D 6");
+    	buffer_print("□向右移动：→ D 6");
     	gotoxyWithFullwidth(27, 12);
-    	printf("□向下移动：↓ S 2");
+    	buffer_print("□向下移动：↓ S 2");
     	gotoxyWithFullwidth(27, 13);
-    	printf("□顺时针转：↑ W 8");
+    	buffer_print("□顺时针转：↑ W 8");
     	gotoxyWithFullwidth(27, 14);
-    	printf("□逆时针转：   X 0");
+    	buffer_print("□逆时针转：   X 0");
     	gotoxyWithFullwidth(27, 15);
-    	printf("□直接落地：Space");
+    	buffer_print("□直接落地：Space");
     	gotoxyWithFullwidth(27, 16);
-    	printf("□暂停游戏：Enter");
+    	buffer_print("□暂停游戏：Enter");
     	gotoxyWithFullwidth(27, 17);
-    	printf("□结束游戏：Esc");
+    	buffer_print("□结束游戏：Esc");
     }
     
     gotoxyWithFullwidth(25, 23);
-    printf("■By: %s", INFO_AUTHOR);
+    buffer_printf("■By: %s", INFO_AUTHOR);
+    flushPrint();
 }
 
 // =============================================================================
@@ -1572,7 +1578,8 @@ uint16_t getBestPlacing(const TetrisManager *manager)
 void autoRun(TetrisManager *manager, TetrisControl *control)
 {
     uint16_t best;
-    int8_t i, rotate, destX, deltaX;
+    int8_t i, rotate, destX, deltaX, attemptMoveDirection;
+    bool state; // 上一次操作是否成功 
     signed long delayTime = 100;
     if (easterEgg[2])
 	{
@@ -1601,12 +1608,13 @@ void autoRun(TetrisManager *manager, TetrisControl *control)
                 SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
                 if (control->pause)
                 {
-                	printf("■");
+                	buffer_print("■");
 				}
 				else
 				{
-					printf("□");
+					buffer_print("□");
 				}
+				flushPrint();
                 break;
             case 72: case 'W': case '+': // 上
                 delayTime /= 2;
@@ -1649,12 +1657,28 @@ void autoRun(TetrisManager *manager, TetrisControl *control)
         deltaX = destX - manager->x;  // 移动的格数，结果为正向右移，负向左移
 		
 		// 准备动画 
+		attemptMoveDirection = 0; // 当旋转失败时尝试往左移动 
         for (i = 0; i < rotate; ++i)  // 旋转
         {
 			Sleep(delayTime);
-			calcFPS();  // 为了保证FPS准确性不解释 
 			Sleep(delayTime);
-            keydownControl(manager, control, 'w');
+            state = keydownControl(manager, control, 'w');
+            if (!state)
+            {
+            	--i;
+            	if (attemptMoveDirection == 0)
+				{
+					state = keydownControl(manager, control, 'a');
+					if (!state)
+					{
+						attemptMoveDirection = 1;
+					}
+				}
+				if (attemptMoveDirection == 1)
+				{
+					keydownControl(manager, control, 'w');
+				}
+            }
         }
 
 		Sleep(delayTime);
@@ -1781,24 +1805,24 @@ inline signed long calcFPS(void)
     	fraps = framesElapsed * 1000.0 / (lastRecordedTime - lastDisplayTime);
 		mark = (unsigned long)(totalFramesElapsed * 100000.0 / (lastRecordedTime - general.startTime));
     	
-    	SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
+    	buffer_SetConsoleTextAttribute(g_hConsoleOutput, 0x0B);
     	if (general.benchmark)
     	{
 			gotoxyWithFullwidth(32, 20);
-    		printf("%6u%4s", mark, "");
+    		buffer_printf("%6u%4s", mark, "");
     		if (mark > markMax)
 			{ 
 				markMaxDuration = 0;
 				markMaxLesser = markMax;
 				markMax = mark; 
 				gotoxyWithFullwidth(32, 21);
-    			printf("%6u%4s", markMaxLesser, "");
+    			buffer_printf("%6u%4s", markMaxLesser, "");
     		}
     		else if (mark > markMaxLesser){
     			markMaxDuration++;
     			markMaxLesser = mark;
 				gotoxyWithFullwidth(32, 21);
-    			printf("%6u%4s", markMaxLesser, "");
+    			buffer_printf("%6u%4s", markMaxLesser, "");
     		}
     		else
     		{
@@ -1813,12 +1837,12 @@ inline signed long calcFPS(void)
     	{
     		SetConsoleTextAttribute(g_hConsoleOutput, 0x0C);
 			gotoxyWithFullwidth(32, 21);
-    		printf("Maxed Out!");
+    		buffer_print("Maxed Out!");
     	}
 		else
 		{
 			gotoxyWithFullwidth(32, 21);
-    		printf("%6.2lf fps", fraps);
+    		buffer_printf("%6.2lf fps", fraps);
     	}
     	lastDisplayTime = lastRecordedTime;
     	framesElapsed = 0;
@@ -1834,20 +1858,46 @@ inline void pause(void)
 }
 
 inline void clrscr(void){
-	static DWORD clsCount; 
-	static COORD startPos = {0, 0};
-	static CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
-	static DWORD consoleScreenBufferSize;
-	
-	// 计算屏幕缓冲区大小 
-	GetConsoleScreenBufferInfo(g_hConsoleOutput,&consoleScreenBufferInfo);
-	consoleScreenBufferSize = consoleScreenBufferInfo.dwSize.X * consoleScreenBufferInfo.dwSize.Y;
-	
-	// 清屏 
-	FillConsoleOutputCharacter(g_hConsoleOutput,0x20,consoleScreenBufferSize,startPos,&clsCount);
-	FillConsoleOutputAttribute(g_hConsoleOutput,0x0F,consoleScreenBufferSize,startPos,&clsCount);
-	SetConsoleCursorPosition(g_hConsoleOutput,startPos);
+	int i;
+	for(i = 0; i < 2000; i++){
+		outputBuffer[outputCursorPosition.Y][outputCursorPosition.X].Char.AsciiChar = '\0';
+		outputBuffer[outputCursorPosition.Y][outputCursorPosition.X].Attributes = 0x0F;
+		IncrementOutputCursorPosition();
+	}
+	flushPrint();
 }
+
+inline void flushPrint(){
+	SMALL_RECT outputWriteRegion = outputRegion;
+	calcFPS();
+	WriteConsoleOutput(g_hConsoleOutput, (const CHAR_INFO*)outputBuffer, outputBufferSize, zeroPosition, &outputWriteRegion);
+}
+inline void buffer_SetConsoleCursorPosition(HANDLE nul, COORD Pos){
+	outputCursorPosition.X = Pos.X;
+	outputCursorPosition.Y = Pos.Y;
+}
+inline void buffer_SetConsoleTextAttribute(HANDLE nul, WORD Attribute){
+	outputAttribute = Attribute;
+}
+void buffer_print(LPCSTR String){
+	while (*String != '\0'){
+		outputBuffer[outputCursorPosition.Y][outputCursorPosition.X].Char.AsciiChar = *String;
+		outputBuffer[outputCursorPosition.Y][outputCursorPosition.X].Attributes = outputAttribute;
+		++String;
+		IncrementOutputCursorPosition();
+	}
+}
+inline void IncrementOutputCursorPosition(){
+	outputCursorPosition.X++;
+	if (outputCursorPosition.X >= outputBufferSize.X){
+		outputCursorPosition.X = 0;
+		outputCursorPosition.Y++;
+		if (outputCursorPosition.Y >= outputBufferSize.Y){
+			outputCursorPosition.Y = 0;
+		}
+	}
+}
+
 
 bool enableDebugPrivilege()
 {   
