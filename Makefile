@@ -11,15 +11,15 @@ LINKOBJ  = $(OBJ) $(RES)
 #LIBS     = -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib" -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/mingw32/lib" -static-libgcc
 #INCS     = -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/mingw32/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/mingw32/6.3.0/include"
 BIN      = Tetris_$(BUILD).exe
-CFLAGS   = $(INCS) -Wall -Wextra -O3 -Os -s -std=c99 -m32
-RM       = rm.exe -f
+CFLAGS   = $(INCS) -Wall -Wextra -Wno-unused-parameter -O3 -Os -s -std=c99 -m32
+RM      ?= rm.exe -f
 
-.PHONY: all all-before all-after clean clean-custom
+.PHONY: all clean
 
-all: all-before $(BIN) all-after
+all: $(BIN)
 
-clean: clean-custom
-	${RM} $(OBJ) $(BIN)
+clean:
+	${RM} $(OBJ) $(BIN) $(RES)
 
 $(BIN): $(OBJ) $(RES)
 	$(CC) $(LINKOBJ) -o $(BIN) $(LIBS) $(CFLAGS)
