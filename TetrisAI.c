@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-const char* const INFO_AUTHOR = "GeForce GTX 982 Ti";
-const char* const INFO_VERSION = "1.8 d"; 
+const char* const INFO_AUTHOR = "GeForce GTX TITAN X";
+const char* const INFO_VERSION = "1.9 a"; 
 
 
 // 方块形状
@@ -88,7 +88,8 @@ struct{
 	bool resetFpsCounter; 
 } general; 
 
-unsigned long fpsRate = 800; 
+unsigned long fpsRate = 800;
+unsigned short lastInsertedHeight = 0;
 // =============================================================================
 // 彩蛋：
 // [0] 大师向泽耍淫威
@@ -215,8 +216,15 @@ int main(int argc, char* argv[])
 	
 	GetConsoleScreenBufferInfo(g_hConsoleOutput, &screenInfo);
 	COORD bufferSize;
+	/*
 	bufferSize.X = 1 + screenInfo.srWindow.Right;
 	bufferSize.Y = 1 + screenInfo.srWindow.Bottom;
+	*/
+	bufferSize.X = 80;
+	bufferSize.Y = 25;
+	
+	SMALL_RECT consoleWindowPos = {0, 0, 79, 24};
+	SetConsoleWindowInfo(g_hConsoleOutput, TRUE, &consoleWindowPos);
 	SetConsoleScreenBufferSize(g_hConsoleOutput, bufferSize); 
 	clrscr();
 	
@@ -360,13 +368,30 @@ void giveTetris(TetrisManager *manager, TetrisControl *control)
 	
 	// 动点手脚，让I形数量稍微多一些 
 	num = rand();
+	/*
+	if (general.model==1)
+	{
+		if (lastInsertedHeight<=16 && num%7==0)
+		{
+			manager->type[2] = 1+num%6;
+		}
+		else if (num >= 40000-lastInsertedHeight*300)
+		{
+			manager->type[2] = 0;// 动些手脚 
+		}
+		else
+		{
+			manager->type[2] = num%7;
+		}
+	}
+	*/
 	if (num >= 32200)
 	{
 		manager->type[2] = 0;// 动些手脚 
 	}
 	else
 	{
-    	manager->type[2] = rand() % 7;// 随机生成下下一个方块
+    	manager->type[2] = num % 7;// 随机生成下下一个方块
     }
     if (general.benchmark)
     {
@@ -576,12 +601,13 @@ void dropDownTetris(TetrisManager *manager, TetrisControl *control)
             break;
         }
     }
-    --manager->y;  // 上移一格当然没有碰撞
+    lastInsertedHeight = --manager->y; // 上移一格当然没有碰撞
 
     insertTetris(manager);  // 放入当前方块
     setPoolColor(manager, control);  // 设置颜色
 
     printTetrisPool(manager, control);  // 先显示游戏池
+    calcFPS();
     if (checkErasing(manager, control) && control->frameRate > 0)  // 检测消行并缓冲 
 	{
 		Sleep(2 * control->frameRate);
@@ -809,7 +835,7 @@ int mainMenu()
             return index;
         case 27:  // Esc键直接退出 
         	exit(0);
-        	return 0;
+        	return -1;
         case 8:  // Backspace键清除已输入的秘密代码 
         	memset(secretKey, 0, sizeof(secretKey));
         	secretIndex = 0;
@@ -866,7 +892,7 @@ inline void gotoxyInPool(short x, short y)
 
 // =============================================================================
 // 显示游戏池
-// 显卡先生的神迹：Sync显示方法回归！
+// 显卡先生的神迹：NVIDIA G-Sync显示方法回归！
 static uint16_t ppool[16][28] = {0}; 
 
 void printTetrisPool(const TetrisManager *manager, const TetrisControl *control)
@@ -924,7 +950,7 @@ void printCurrentTetris(const TetrisManager *manager, const TetrisControl *contr
             }
             else  // 没有方块，显示空白
             {
-            	if (ppool[x][y] = 0)continue;
+            	if (ppool[x][y] == 0)continue;
                 // 多余SetConsoleTextAttribute(g_hConsoleOutput, 0);
                 printf("%2s", "");
                 ppool[x][y] = 0;
@@ -972,7 +998,7 @@ void printNextTetris(const TetrisManager *manager)
 // 显示得分信息
 void printScore(const TetrisManager *manager, const TetrisControl *control)
 {
-	static TetrisControl sync; // 高效率Sync实现方法回来了！
+	static TetrisControl sync; // 高效率NVIDIA G-Sync实现方法回来了！
 	static bool flag; 
     int8_t i;
 
@@ -1189,7 +1215,7 @@ void runGame(TetrisManager *manager, TetrisControl *control)
         if (!control->pause)  // 未暂停
         {
             clockNow = getTime();  // 计时
-            // 两次记时的间隔超过0.45秒
+            // 两次记时的间隔超过设定的值 
             if (clockNow - clockLast > control->frameRate)
             {
                 clockLast = clockNow;
