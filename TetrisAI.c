@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 const char* const INFO_AUTHOR = "GeForce GTX 982 Ti";
-const char* const INFO_VERSION = "1.8 a";
+const char* const INFO_VERSION = "1.8 b"; 
 
 
 // 方块形状
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
         printPrompting(&tetrisControl);  // 显示提示信息
         printPoolBorder();  // 显示游戏池边界
 		
-		int8_t prevEE2; 
+		int8_t prevEE2;
         switch (general.model)
         {
         case 0: 
@@ -883,6 +883,8 @@ inline void gotoxyInPool(short x, short y)
 
 // =============================================================================
 // 显示游戏池
+// 显卡先生的神迹：Sync显示方法回归！
+static uint16_t ppool[16][28] = {0}; 
 
 void printTetrisPool(const TetrisManager *manager, const TetrisControl *control)
 {
@@ -891,19 +893,24 @@ void printTetrisPool(const TetrisManager *manager, const TetrisControl *control)
 
     for (y = ROW_BEGIN; y < ROW_END; ++y)  // 不显示顶部4行和底部2行
     {
-		gotoxyInPool(2, y);
         for (x = COL_BEGIN; x < COL_END; ++x)  // 不显示左右边界
         {
             if ((manager->pool[y] >> x) & 1)  // 游戏池该方格有方块
             {
+        		if (control->color[y][x] == ppool[x][y])continue; // 方块未变化则跳过 
                 // 用相应颜色，显示一个实心方块
+				gotoxyInPool(x, y);
                 SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
                 printf("■");
+                ppool[x][y] = control->color[y][x];
             }
             else  // 没有方块，显示空白
             {
+				if (ppool[x][y] == 0)continue; 
                 // 多余SetConsoleTextAttribute(g_hConsoleOutput, 0);
+				gotoxyInPool(x, y);
                 printf("%2s", "");
+                ppool[x][y] = 0;
             }
         }
     }
@@ -929,12 +936,15 @@ void printCurrentTetris(const TetrisManager *manager, const TetrisControl *contr
                 // 用相应颜色，显示一个实心方块
                 SetConsoleTextAttribute(g_hConsoleOutput, control->color[y][x]);
                 printf("■");
+                ppool[x][y] = control->color[y][x];
                 
             }
             else  // 没有方块，显示空白
             {
+            	if (ppool[x][y] = 0)continue;
                 // 多余SetConsoleTextAttribute(g_hConsoleOutput, 0);
                 printf("%2s", "");
+                ppool[x][y] = 0;
             }
         }
     }
@@ -1492,7 +1502,7 @@ uint16_t getBestPlacing(const TetrisManager *manager)
         rotateLimit = 1;
         break;
     default:
-    	rotateLimit = 0; 
+        rotateLimit = 0;
         break;
     }
 
