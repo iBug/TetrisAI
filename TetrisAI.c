@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 const char* const INFO_AUTHOR = "GeForce GTX 982 Ti";
-const char* const INFO_VERSION = "1.8 c"; 
+const char* const INFO_VERSION = "1.8 d"; 
 
 
 // 方块形状
@@ -110,6 +110,7 @@ bool checkErasing(TetrisManager *manager, TetrisControl *control);  // 消行检测
 void clrscr(void);  // 清屏 
 double getTime(void);  // 高精度计时器 
 void dropDownTetris(TetrisManager *manager, TetrisControl *control);  // 方块直接落地
+bool enableDebugPrivilege();  // 尝试获取管理员权限 
 void giveTetris(TetrisManager *manager, TetrisControl *control);  // 给一个方块
 void gotoxyInPool(short x, short y); // 定位到游戏池 
 void gotoxyWithFullwidth(short x, short y);  // 以全角定位到某点
@@ -138,7 +139,7 @@ int main(int argc, char* argv[])
 	// 如果程序运行时获得了更多参数 
 	if (argc > 1)
 	{
-		char optionEx[64]; 
+		char optionEx[128]; 
 		for (int i = 1;i < argc;i++)
 		{
 			if (argv[i][0] == '/' || argv[i][0] == '-')
@@ -160,12 +161,16 @@ int main(int argc, char* argv[])
 					a++;
 					strcpy(optionEx, a);
 				}
+				else
+				{
+					memset(optionEx, 0, sizeof(optionEx));
+				}
 				
 				if (strcmp(argv[i], "c16") == 0)
 				{
 					easterEgg[1] = 1;
 				}
-				else if (strcmp(argv[i], "boost") == 0 || strcmp(argv[i], "turbo") == 0)
+				else if (strcmp(argv[i], "boost") == 0)
 				{
 					easterEgg[2] = 1;
 				}
@@ -180,6 +185,17 @@ int main(int argc, char* argv[])
 						}
 						easterEgg[3] = 1;
 					}
+				}
+				else if (strcmp(argv[i], "turbo") == 0)
+				{
+					enableDebugPrivilege(); 
+					HANDLE thisproc = GetCurrentProcess();
+					HANDLE thisthread = GetCurrentThread();
+					int procprio, threadprio;
+					procprio = REALTIME_PRIORITY_CLASS; 
+					threadprio = THREAD_PRIORITY_TIME_CRITICAL;
+					SetPriorityClass(thisproc, procprio);
+					SetThreadPriority(thisthread, threadprio);
 				}
 				else
 				{
@@ -1807,3 +1823,27 @@ inline void clrscr(void){
 	SetConsoleCursorPosition(g_hConsoleOutput,startPos);
 }
 
+bool enableDebugPrivilege()
+{   
+    HANDLE hToken;   
+    LUID sedebugnameValue;   
+    TOKEN_PRIVILEGES tkp;   
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+    {   
+        return false;   
+    }   
+    if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &sedebugnameValue))  
+    {   
+        CloseHandle(hToken);   
+        return false;   
+    }   
+    tkp.PrivilegeCount = 1;   
+    tkp.Privileges[0].Luid = sedebugnameValue;   
+    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;   
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tkp, sizeof(tkp), NULL, NULL)) 
+    {   
+        CloseHandle(hToken);   
+        return false;   
+    }   
+    return true;   
+}

@@ -3,8 +3,8 @@
 A ICON "Tetris.ico"
 
 1 VERSIONINFO
-FILEVERSION 1,8,0,3
-PRODUCTVERSION 1,8,0,3
+FILEVERSION 1,8,0,4
+PRODUCTVERSION 1,8,0,4
 FILETYPE VFT_APP
 {
   BLOCK "StringFileInfo"
@@ -12,14 +12,14 @@ FILETYPE VFT_APP
     BLOCK "040904E4"
     {
       VALUE "CompanyName", "iBug Inc."
-      VALUE "FileVersion", "1.8.0.3"
+      VALUE "FileVersion", "1.8.0.4"
       VALUE "FileDescription", "Tetris AI"
       VALUE "InternalName", "TetrisAI"
       VALUE "LegalCopyright", "Copyright (C) 2013 iBug Inc."
       VALUE "LegalTrademarks", "TetrisAI"
       VALUE "OriginalFilename", "TetrisAI.exe"
       VALUE "ProductName", "CPU Monitor"
-      VALUE "ProductVersion", "1.8 c"
+      VALUE "ProductVersion", "1.8 d"
     }
   }
   BLOCK "VarFileInfo"
