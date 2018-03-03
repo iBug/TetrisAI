@@ -7,8 +7,8 @@
 #include <time.h>
 #include <windows.h>
 
-const char *const INFO_AUTHOR = "GeForce GTX TITAN X";
-const char *const INFO_VERSION = "1.10 b";
+const char *const INFO_AUTHOR = "iBug";
+const char *const INFO_VERSION = "1.10 c";
 
 // Blocks
 enum {
@@ -132,7 +132,7 @@ void runGame(TetrisManager *manager, TetrisControl *control);
 void setPoolColor(const TetrisManager *manager, TetrisControl *control);
 
 // =============================================================================
-// 优化第二弹：缓冲刷新式输出
+// iBug's C-Sync technology!
 CHAR_INFO outputBuffer[25][80];
 const SMALL_RECT outputRegion = {0, 0, 79, 24};
 const COORD outputBufferSize = {80, 25}, zeroPosition = {0, 0};
@@ -226,7 +226,7 @@ int main(int argc, char *argv[]) {
 	clrscr();
 
 	SetConsoleCursorInfo(hConsoleOutput, &cursorInfo);
-	snprintf(charBuf, sizeof(charBuf), "高能俄罗斯方块Ver %s", INFO_VERSION);
+	snprintf(charBuf, sizeof(charBuf), "Tetris with AI ver %s", INFO_VERSION);
 	SetConsoleTitleA(charBuf);
 
 	DeleteMenu(GetSystemMenu(GetConsoleWindow(), 0), SC_MAXIMIZE, MF_DISABLED);
@@ -270,16 +270,15 @@ int main(int argc, char *argv[]) {
 				gotoxyWithFullwidth(14, 5);
 				buffer_print("┏━━━━━━━━━━┓");
 				gotoxyWithFullwidth(14, 6);
-				buffer_print("┃   高能俄罗斯方块   ┃");
+				buffer_print("┃   Tetris with AI   ┃");
 				gotoxyWithFullwidth(14, 7);
-				buffer_print("┃      跑分模式      ┃");
+				buffer_print("┃   Benchmark Mode   ┃");
 				gotoxyWithFullwidth(14, 8);
 				buffer_print("┗━━━━━━━━━━┛");
 				gotoxyWithFullwidth(14, 9);
-				buffer_printf("作者：%s", INFO_AUTHOR);
+				buffer_printf("Author: %s", INFO_AUTHOR);
 				gotoxyWithFullwidth(15, 11);
-				buffer_print("你的电脑评分：");
-				buffer_printf("%6ld", mark);
+				buffer_printf("Score: %6ld", mark);
 
 				flushPrint();
 				pause();
@@ -292,12 +291,11 @@ int main(int argc, char *argv[]) {
 
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 0xF0);
 		gotoxyWithFullwidth(12, 9);
-		buffer_print("                    \n");
+		buffer_print("                    ");
 		gotoxyWithFullwidth(12, 10);
-		buffer_print(easterEgg[1] ? "   谢文皓喜欢叶子   "
-					 : "  按任意键回主菜单  ");
+		buffer_print(easterEgg[1] ? "   Stack Overflow   " : "   Press any key.   ");
 		gotoxyWithFullwidth(12, 11);
-		buffer_print("                    \n");
+		buffer_print("                    ");
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 0x07);
 		flushPrint();
 		pause();
@@ -680,12 +678,10 @@ int mainMenu() {
 		indexTotal = 2; // Hide benchmark mode under debugging mode
 	}
 	static const char *const modelItem[] = {
-		"1.自己动手的垃圾尝试", "2.显卡先生的神迹再现", "3.无敌至尊的跑分模式"
+		"1. Play Now", "2. iBug's Marvel", "3. Benchmark mode"
 	};
 #define secretNum 3
-	static const char *const secretCode[secretNum] = {"xzsyw", "xwhxhyz",
-													  "boost"
-													 };
+	static const char *const secretCode[secretNum] = {"xzsyw", "sososo", "boost"};
 	static char secretKey[1024];
 	signed long int index = 0, secretIndex = 0, ch;
 
@@ -693,7 +689,7 @@ int mainMenu() {
 	gotoxyWithFullwidth(14, 5);
 	buffer_print("┏━━━━━━━━━━┓");
 	gotoxyWithFullwidth(14, 6);
-	buffer_print("┃   高能俄罗斯方块   ┃");
+	buffer_print("┃   Tetris with AI   ┃");
 	gotoxyWithFullwidth(14, 7);
 	buffer_printf("┃   Version: %s", INFO_VERSION);
 	gotoxyWithFullwidth(25, 7);
@@ -701,7 +697,7 @@ int mainMenu() {
 	gotoxyWithFullwidth(14, 8);
 	buffer_print("┗━━━━━━━━━━┛");
 	gotoxyWithFullwidth(14, 9);
-	buffer_printf("作者：%s", INFO_AUTHOR);
+	buffer_printf("Author: %s", INFO_AUTHOR);
 
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0xF0);
 	for (int i = 0; i < indexTotal; i++) {
@@ -716,10 +712,10 @@ int mainMenu() {
 		switch (ch) {
 			/*
 			// For cheat keys
-			case 'w': case 'W': case '8': case 72:  // 上
-			case 'a': case 'A': case '4': case 75:  // 左
-			case 'd': case 'D': case '6': case 77:  // 右
-			case 's': case 'S': case '2': case 80:  // 下
+			case 'w': case 'W': case '8': case 72:  // Up
+			case 'a': case 'A': case '4': case 75:  // Left
+			case 'd': case 'D': case '6': case 77:  // Right
+			case 's': case 'S': case '2': case 80:  // Down
 			*/
 
 			//===========================================
@@ -896,29 +892,29 @@ void printScore(const TetrisManager *manager, const TetrisControl *control) {
 		gotoxyWithFullwidth(6, 10 + i);
 		buffer_printf("%u", control->erasedCount[i]);
 	}
-	gotoxyWithFullwidth(7, 8);
+	gotoxyWithFullwidth(6, 8);
 	buffer_printf("%u", control->erasedTotal);
 
 	for (i = 0; i < 7; ++i) {
 		gotoxyWithFullwidth(6, 17 + i);
 		buffer_printf("%u", control->tetrisCount[i]);
 	}
-	gotoxyWithFullwidth(7, 15);
+	gotoxyWithFullwidth(6, 15);
 	buffer_printf("%u", control->tetrisTotal);
 }
 
 // =============================================================================
 void printPrompting(const TetrisControl *control) {
-	static const char *const modelName[] = {"自己动手垃圾尝试",
-											"显卡先生神迹再现"
+	static const char *const modelName[] = {"Play Now",
+											"iBug's Marvel"
 										   };
-	static const char *const easterEggName = "大师向泽来耍淫威";
+	static const char *const easterEggName = "Master's Spell";
 	static const char *const tetrisName = "ITLJZSO";
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0E);
 
 	gotoxyWithFullwidth(1, 1);
 	if (general.benchmark) {
-		buffer_print("■Benchmark跑分");
+		buffer_print("■Benchmark Mode");
 	} else {
 		if (easterEgg[0]) {
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0C);
@@ -930,26 +926,24 @@ void printPrompting(const TetrisControl *control) {
 		buffer_print(control->model ? modelName[0] : modelName[1]);
 	}
 	gotoxyWithFullwidth(1, 3);
-	buffer_print("□按Esc回主菜单");
+	buffer_print("□[Esc] Exit");
 
 	gotoxyWithFullwidth(1, 6);
-	buffer_print("■得分：");
-	buffer_printf("%u", control->score);
+	buffer_printf("■Score %u", control->score);
 	gotoxyWithFullwidth(1, 8);
-	buffer_print("■消行总数：");
-	buffer_printf("%u", control->erasedTotal);
+	buffer_printf("■Erased: %u", control->erasedTotal);
 
 	int8_t i;
 	for (i = 0; i < 4; ++i) {
 		gotoxyWithFullwidth(2, 10 + i);
-		buffer_printf("□消%1s%d：%u", "", i + 1, control->erasedCount[i]);
+		buffer_printf("□%dL:   %u", i + 1, control->erasedCount[i]);
 	}
 	gotoxyWithFullwidth(1, 15);
-	buffer_printf("■方块总数：%u", control->tetrisTotal);
+	buffer_printf("■Blocks: %u", control->tetrisTotal);
 
 	for (i = 0; i < 7; ++i) {
 		gotoxyWithFullwidth(2, 17 + i);
-		buffer_printf("□%1s%c形：%u", "", tetrisName[i], control->tetrisCount[i]);
+		buffer_printf("□%c:    %u", tetrisName[i], control->tetrisCount[i]);
 	}
 
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0xF);
@@ -987,50 +981,50 @@ void printPrompting(const TetrisControl *control) {
 
 		if (general.benchmark) {
 			gotoxyWithFullwidth(26, 8);
-			buffer_print("■跑分模式：");
+			buffer_print("■Benchmark");
 			gotoxyWithFullwidth(27, 10);
-			buffer_print("□退出：Esc");
+			buffer_print("□[Esc]: Exit");
 
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
 			gotoxyWithFullwidth(26, 20);
-			buffer_printf("■当前评分：%6u", 100 * (unsigned)0.0);
+			buffer_printf("■Current Score: %6u", 100 * (unsigned)0.0);
 			gotoxyWithFullwidth(26, 21);
-			buffer_printf("■电脑评分：%6u", 100 * (unsigned)0.0);
+			buffer_printf("■Computer Rank: %6u", 100 * (unsigned)0.0);
 		} else {
 			gotoxyWithFullwidth(26, 8);
-			buffer_print("■观看模式：");
+			buffer_print("■Watch Marvel");
 			gotoxyWithFullwidth(27, 10);
-			buffer_print("□加速：↑ W +");
+			buffer_print("□Speed up:  ↑ W +");
 			gotoxyWithFullwidth(27, 11);
-			buffer_print("□减速：↓ S -");
+			buffer_print("□Slow down: ↓ S -");
 			gotoxyWithFullwidth(27, 12);
-			buffer_print("□暂停：Space Enter");
+			buffer_print("□Pause:     Space Enter");
 			gotoxyWithFullwidth(27, 13);
-			buffer_print("□退出：Esc");
+			buffer_print("□Exit:      Esc");
 
 			gotoxyWithFullwidth(26, 21);
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
-			buffer_printf("■实时帧频：%6.2lf fps", 0.0);
+			buffer_printf("■%6.2lf fps", 0.0);
 		}
 	} else {
 		gotoxyWithFullwidth(26, 8);
-		buffer_print("■游戏模式：");
+		buffer_print("■Manual run");
 		gotoxyWithFullwidth(27, 10);
-		buffer_print("□向左移动：← A 4");
+		buffer_print("□Move left:  ← A 4");
 		gotoxyWithFullwidth(27, 11);
-		buffer_print("□向右移动：→ D 6");
+		buffer_print("□Move right: → D 6");
 		gotoxyWithFullwidth(27, 12);
-		buffer_print("□向下移动：↓ S 2");
+		buffer_print("□Move down:  ↓ S 2");
 		gotoxyWithFullwidth(27, 13);
-		buffer_print("□顺时针转：↑ W 8");
+		buffer_print("□Clockwise:  ↑ W 8");
 		gotoxyWithFullwidth(27, 14);
-		buffer_print("□逆时针转：   X 0");
+		buffer_print("□CounterCW:     X 0");
 		gotoxyWithFullwidth(27, 15);
-		buffer_print("□直接落地：Space");
+		buffer_print("□Drop down:  Space");
 		gotoxyWithFullwidth(27, 16);
-		buffer_print("□暂停游戏：Enter");
+		buffer_print("□Pause:      Enter");
 		gotoxyWithFullwidth(27, 17);
-		buffer_print("□结束游戏：Esc");
+		buffer_print("□End game:   Esc");
 	}
 
 	gotoxyWithFullwidth(25, 23);
@@ -1519,16 +1513,16 @@ inline double getTime(void) {
 }
 
 inline signed long calcFPS(void) {
-	static double fraps;                         // 计算用变量
-	static unsigned long framesElapsed = 0;      // 新算法使用变量
-	static unsigned long totalFramesElapsed = 0; // Benchmark模式使用变量
+	static double fraps;
+	static unsigned long framesElapsed = 0;
+	static unsigned long totalFramesElapsed = 0;
 	static unsigned long mark,
-		   markMax = 0, markMaxLesser = 0; // Benchmark评分，注意返回第二峰值分数
+		   markMax = 0, markMaxLesser = 0;
 	static unsigned long markMaxDuration =
-		0; // 连续50次计数没有更新markMax就结束Benchmark模式
+		0;
 
-	static double lastRecordedTime = 0.0; // 游戏内置计时器
-	static double lastDisplayTime = 0.0;  // 控制一秒输出一次
+	static double lastRecordedTime = 0.0;
+	static double lastDisplayTime = 0.0;
 
 	if (general.resetFpsCounter) {
 		general.resetFpsCounter = false;
@@ -1560,25 +1554,25 @@ inline signed long calcFPS(void) {
 				markMaxDuration = 0;
 				markMaxLesser = markMax;
 				markMax = mark;
-				gotoxyWithFullwidth(32, 21);
+				gotoxyWithFullwidth(27, 21);
 				buffer_printf("%6lu%4s", markMaxLesser, "");
 			} else if (mark > markMaxLesser) {
 				markMaxDuration++;
 				markMaxLesser = mark;
-				gotoxyWithFullwidth(32, 21);
+				gotoxyWithFullwidth(27, 21);
 				buffer_printf("%6lu%4s", markMaxLesser, "");
 			} else {
 				markMaxDuration++;
-				if (markMaxDuration > 15) {
+				if (markMaxDuration > 20) {
 					return -(signed long)markMaxLesser; // End Benchmark mode
 				}
 			}
-		} else if (fraps > 999.48) {
+		} else if (fraps > 9999.48) {
 			SetConsoleTextAttribute(hConsoleOutput, 0x0C);
-			gotoxyWithFullwidth(32, 21);
+			gotoxyWithFullwidth(27, 21);
 			buffer_print("Maxed Out!");
 		} else {
-			gotoxyWithFullwidth(32, 21);
+			gotoxyWithFullwidth(27, 21);
 			buffer_printf("%6.2lf fps", fraps);
 		}
 		lastDisplayTime = lastRecordedTime;
