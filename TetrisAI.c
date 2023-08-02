@@ -97,6 +97,8 @@ int8_t easterEgg[easterNum] = {0};
 
 // =============================================================================
 // Function board
+bool isWindowsTerminal();
+
 void autoRun(TetrisManager *manager, TetrisControl *control);
 void benchmark(TetrisManager *manager, TetrisControl *control);
 signed long benchmarkRun(TetrisManager *manager, TetrisControl *control);
@@ -152,6 +154,16 @@ void buffer_print(LPCSTR String);
 
 // =============================================================================
 int main(int argc, char *argv[]) {
+	// Restart with conhost.exe if running in WT.
+	if (IsWindowsTerminal()) {
+		char currentPath[MAX_PATH];
+		GetModuleFileNameA(NULL, currentPath, MAX_PATH);
+	
+		char command[MAX_PATH + 15];
+		sprintf_s(command, "conhost.exe %s", currentPath);
+		system(command);
+		return 0;
+	}
 	// In case there's any cmdline arguments
 	if (argc > 1) {
 		char optionEx[128];
@@ -268,13 +280,13 @@ int main(int argc, char *argv[]) {
 				clrscr();
 				buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0F);
 				gotoxyWithFullwidth(14, 5);
-				buffer_print("©≥©•©•©•©•©•©•©•©•©•©•©∑");
+				buffer_print("‚îè‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îì");
 				gotoxyWithFullwidth(14, 6);
-				buffer_print("©ß   Tetris with AI   ©ß");
+				buffer_print("‚îÉ   Tetris with AI   ‚îÉ");
 				gotoxyWithFullwidth(14, 7);
-				buffer_print("©ß   Benchmark Mode   ©ß");
+				buffer_print("‚îÉ   Benchmark Mode   ‚îÉ");
 				gotoxyWithFullwidth(14, 8);
-				buffer_print("©ª©•©•©•©•©•©•©•©•©•©•©ø");
+				buffer_print("‚îó‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îõ");
 				gotoxyWithFullwidth(14, 9);
 				buffer_printf("Author: %s", INFO_AUTHOR);
 				gotoxyWithFullwidth(15, 11);
@@ -306,6 +318,43 @@ int main(int argc, char *argv[]) {
 	gotoxyWithFullwidth(0, 0);
 	// CloseHandle(hConsoleOutput);
 	return 0;
+}
+
+// =============================================================================
+BOOL IsWindowsTerminal()
+{
+    HWND hwndConsole = GetForegroundWindow();
+
+    if (hwndConsole != NULL)
+    {
+        DWORD dwConsoleProcessId;
+        GetWindowThreadProcessId(hwndConsole, &dwConsoleProcessId);
+
+        HANDLE hConsoleProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwConsoleProcessId);
+        if (hConsoleProcess != NULL)
+        {
+            WCHAR processPath[MAX_PATH];
+            DWORD dwSize = MAX_PATH;
+
+            if (QueryFullProcessImageNameW(hConsoleProcess, 0, processPath, &dwSize) != 0)
+            {
+                WCHAR* fileName = wcsrchr(processPath, L'\\');
+                if (fileName != NULL)
+                {
+                    std::wcout<<fileName;
+                	if (_wcsicmp(fileName + 1, L"WindowsTerminal.exe") == 0)
+                    {
+                        CloseHandle(hConsoleProcess);
+                        return TRUE;
+                    }
+                }
+            }
+
+            CloseHandle(hConsoleProcess);
+        }
+    }
+
+    return FALSE;
 }
 
 // =============================================================================
@@ -588,7 +637,7 @@ bool keydownControl(TetrisManager *manager, TetrisControl *control, int key) {
 	if (general.model == 0 && lastAction >= 0) {
 		gotoxyWithFullwidth(27, 10 + lastAction);
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
-		buffer_print("°ı");
+		buffer_print("‚ñ°");
 	}
 
 	if (key == 13) { // Pause/Unpause
@@ -599,9 +648,9 @@ bool keydownControl(TetrisManager *manager, TetrisControl *control, int key) {
 		gotoxyWithFullwidth(27, 10 + lastAction);
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
 		if (control->pause) {
-			buffer_print("°ˆ");
+			buffer_print("‚ñ†");
 		} else {
-			buffer_print("°ı");
+			buffer_print("‚ñ°");
 		}
 	}
 
@@ -657,7 +706,7 @@ bool keydownControl(TetrisManager *manager, TetrisControl *control, int key) {
 	if (general.model == 0 && lastAction >= 0) {
 		gotoxyWithFullwidth(27, 10 + lastAction);
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
-		buffer_print("°ˆ");
+		buffer_print("‚ñ†");
 	}
 	return ret;
 }
@@ -687,15 +736,15 @@ int mainMenu() {
 
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0F);
 	gotoxyWithFullwidth(14, 5);
-	buffer_print("©≥©•©•©•©•©•©•©•©•©•©•©∑");
+	buffer_print("‚îè‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îì");
 	gotoxyWithFullwidth(14, 6);
-	buffer_print("©ß   Tetris with AI   ©ß");
+	buffer_print("‚îÉ   Tetris with AI   ‚îÉ");
 	gotoxyWithFullwidth(14, 7);
-	buffer_printf("©ß   Version: %s", INFO_VERSION);
+	buffer_printf("‚îÉ   Version: %s", INFO_VERSION);
 	gotoxyWithFullwidth(25, 7);
-	buffer_print("©ß");
+	buffer_print("‚îÉ");
 	gotoxyWithFullwidth(14, 8);
-	buffer_print("©ª©•©•©•©•©•©•©•©•©•©•©ø");
+	buffer_print("‚îó‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îÅ‚îõ");
 	gotoxyWithFullwidth(14, 9);
 	buffer_printf("Author: %s", INFO_AUTHOR);
 
@@ -811,7 +860,7 @@ void printTetrisPool(const TetrisManager *manager,
 					continue;
 				gotoxyInPool(x, y);
 				buffer_SetConsoleTextAttribute(hConsoleOutput, control->color[y][x]);
-				buffer_print("°ˆ");
+				buffer_print("‚ñ†");
 				ppool[x][y] = control->color[y][x];
 			} else {
 				if (ppool[x][y] == 0)
@@ -838,7 +887,7 @@ void printCurrentTetris(const TetrisManager *manager,
 			gotoxyInPool(x, y);
 			if ((manager->pool[y] >> x) & 1) {
 				buffer_SetConsoleTextAttribute(hConsoleOutput, control->color[y][x]);
-				buffer_print("°ˆ");
+				buffer_print("‚ñ†");
 				ppool[x][y] = control->color[y][x];
 
 			} else {
@@ -862,7 +911,7 @@ void printNextTetris(const TetrisManager *manager) {
 	buffer_SetConsoleTextAttribute(hConsoleOutput, manager->type[1] | 8);
 	for (i = 0; i < 16; ++i) {
 		gotoxyWithFullwidth((i & 3) + 27, (i >> 2) + 2);
-		((tetris >> i) & 1) ? buffer_print("°ˆ") : buffer_print("  ");
+		((tetris >> i) & 1) ? buffer_print("‚ñ†") : buffer_print("  ");
 	}
 
 	if (general.benchmark) {
@@ -874,7 +923,7 @@ void printNextTetris(const TetrisManager *manager) {
 		buffer_SetConsoleTextAttribute(hConsoleOutput, 8);
 		for (i = 0; i < 16; ++i) {
 			gotoxyWithFullwidth((i & 3) + 32, (i >> 2) + 2);
-			((tetris >> i) & 1) ? buffer_print("°ˆ") : buffer_print("  ");
+			((tetris >> i) & 1) ? buffer_print("‚ñ†") : buffer_print("  ");
 		}
 	}
 }
@@ -914,66 +963,66 @@ void printPrompting(const TetrisControl *control) {
 
 	gotoxyWithFullwidth(1, 1);
 	if (general.benchmark) {
-		buffer_print("°ˆBenchmark Mode");
+		buffer_print("‚ñ†Benchmark Mode");
 	} else {
 		if (easterEgg[0]) {
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0C);
-			buffer_print("°ˆ%s");
+			buffer_print("‚ñ†%s");
 			buffer_print(easterEggName);
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0E);
 		}
-		buffer_print("°ˆ");
+		buffer_print("‚ñ†");
 		buffer_print(control->model ? modelName[0] : modelName[1]);
 	}
 	gotoxyWithFullwidth(1, 3);
-	buffer_print("°ı[Esc] Exit");
+	buffer_print("‚ñ°[Esc] Exit");
 
 	gotoxyWithFullwidth(1, 6);
-	buffer_printf("°ˆScore %u", control->score);
+	buffer_printf("‚ñ†Score %u", control->score);
 	gotoxyWithFullwidth(1, 8);
-	buffer_printf("°ˆErased: %u", control->erasedTotal);
+	buffer_printf("‚ñ†Erased: %u", control->erasedTotal);
 
 	int8_t i;
 	for (i = 0; i < 4; ++i) {
 		gotoxyWithFullwidth(2, 10 + i);
-		buffer_printf("°ı%dL:   %u", i + 1, control->erasedCount[i]);
+		buffer_printf("‚ñ°%dL:   %u", i + 1, control->erasedCount[i]);
 	}
 	gotoxyWithFullwidth(1, 15);
-	buffer_printf("°ˆBlocks: %u", control->tetrisTotal);
+	buffer_printf("‚ñ†Blocks: %u", control->tetrisTotal);
 
 	for (i = 0; i < 7; ++i) {
 		gotoxyWithFullwidth(2, 17 + i);
-		buffer_printf("°ı%c:    %u", tetrisName[i], control->tetrisCount[i]);
+		buffer_printf("‚ñ°%c:    %u", tetrisName[i], control->tetrisCount[i]);
 	}
 
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0xF);
 	if (general.benchmark) {
 		// Don't show the second one under benchmark mode
 		gotoxyWithFullwidth(26, 1);
-		buffer_print("©≥©•©•©•©•©∑");
+		buffer_print("‚îè‚îÅ‚îÅ‚îÅ‚îÅ‚îì");
 		gotoxyWithFullwidth(26, 2);
-		buffer_print("©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 3);
-		buffer_print("©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 4);
-		buffer_print("©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 5);
-		buffer_print("©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 6);
-		buffer_print("©ª©•©•©•©•©ø");
+		buffer_print("‚îó‚îÅ‚îÅ‚îÅ‚îÅ‚îõ");
 	} else {
 		gotoxyWithFullwidth(26, 1);
-		buffer_print("©≥©•©•©•©•©◊©•©•©•©•©∑");
+		buffer_print("‚îè‚îÅ‚îÅ‚îÅ‚îÅ‚î≥‚îÅ‚îÅ‚îÅ‚îÅ‚îì");
 		gotoxyWithFullwidth(26, 2);
-		buffer_print("©ß        ©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 3);
-		buffer_print("©ß        ©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 4);
-		buffer_print("©ß        ©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 5);
-		buffer_print("©ß        ©ß        ©ß");
+		buffer_print("‚îÉ        ‚îÉ        ‚îÉ");
 		gotoxyWithFullwidth(26, 6);
-		buffer_print("©ª©•©•©•©•©ﬂ©•©•©•©•©ø");
+		buffer_print("‚îó‚îÅ‚îÅ‚îÅ‚îÅ‚îª‚îÅ‚îÅ‚îÅ‚îÅ‚îõ");
 	}
 
 	buffer_SetConsoleTextAttribute(hConsoleOutput, 0xB);
@@ -981,54 +1030,54 @@ void printPrompting(const TetrisControl *control) {
 
 		if (general.benchmark) {
 			gotoxyWithFullwidth(26, 8);
-			buffer_print("°ˆBenchmark");
+			buffer_print("‚ñ†Benchmark");
 			gotoxyWithFullwidth(27, 10);
-			buffer_print("°ı[Esc]: Exit");
+			buffer_print("‚ñ°[Esc]: Exit");
 
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
 			gotoxyWithFullwidth(26, 20);
-			buffer_printf("°ˆCurrent Score: %6u", 100 * (unsigned)0.0);
+			buffer_printf("‚ñ†Current Score: %6u", 100 * (unsigned)0.0);
 			gotoxyWithFullwidth(26, 21);
-			buffer_printf("°ˆComputer Rank: %6u", 100 * (unsigned)0.0);
+			buffer_printf("‚ñ†Computer Rank: %6u", 100 * (unsigned)0.0);
 		} else {
 			gotoxyWithFullwidth(26, 8);
-			buffer_print("°ˆWatch Marvel");
+			buffer_print("‚ñ†Watch Marvel");
 			gotoxyWithFullwidth(27, 10);
-			buffer_print("°ıSpeed up:  °¸ W +");
+			buffer_print("‚ñ°Speed up:  ‚Üë W +");
 			gotoxyWithFullwidth(27, 11);
-			buffer_print("°ıSlow down: °˝ S -");
+			buffer_print("‚ñ°Slow down: ‚Üì S -");
 			gotoxyWithFullwidth(27, 12);
-			buffer_print("°ıPause:     Space Enter");
+			buffer_print("‚ñ°Pause:     Space Enter");
 			gotoxyWithFullwidth(27, 13);
-			buffer_print("°ıExit:      Esc");
+			buffer_print("‚ñ°Exit:      Esc");
 
 			gotoxyWithFullwidth(26, 21);
 			buffer_SetConsoleTextAttribute(hConsoleOutput, 0x0B);
-			buffer_printf("°ˆ%6.2lf fps", 0.0);
+			buffer_printf("‚ñ†%6.2lf fps", 0.0);
 		}
 	} else {
 		gotoxyWithFullwidth(26, 8);
-		buffer_print("°ˆManual run");
+		buffer_print("‚ñ†Manual run");
 		gotoxyWithFullwidth(27, 10);
-		buffer_print("°ıMove left:  °˚ A 4");
+		buffer_print("‚ñ°Move left:  ‚Üê A 4");
 		gotoxyWithFullwidth(27, 11);
-		buffer_print("°ıMove right: °˙ D 6");
+		buffer_print("‚ñ°Move right: ‚Üí D 6");
 		gotoxyWithFullwidth(27, 12);
-		buffer_print("°ıMove down:  °˝ S 2");
+		buffer_print("‚ñ°Move down:  ‚Üì S 2");
 		gotoxyWithFullwidth(27, 13);
-		buffer_print("°ıClockwise:  °¸ W 8");
+		buffer_print("‚ñ°Clockwise:  ‚Üë W 8");
 		gotoxyWithFullwidth(27, 14);
-		buffer_print("°ıCounterCW:     X 0");
+		buffer_print("‚ñ°CounterCW:     X 0");
 		gotoxyWithFullwidth(27, 15);
-		buffer_print("°ıDrop down:  Space");
+		buffer_print("‚ñ°Drop down:  Space");
 		gotoxyWithFullwidth(27, 16);
-		buffer_print("°ıPause:      Enter");
+		buffer_print("‚ñ°Pause:      Enter");
 		gotoxyWithFullwidth(27, 17);
-		buffer_print("°ıEnd game:   Esc");
+		buffer_print("‚ñ°End game:   Esc");
 	}
 
 	gotoxyWithFullwidth(25, 23);
-	buffer_printf("°ˆBy: %s", INFO_AUTHOR);
+	buffer_printf("‚ñ†By: %s", INFO_AUTHOR);
 	flushPrint();
 }
 
@@ -1061,52 +1110,52 @@ void runGame(TetrisManager *manager, TetrisControl *control) {
 }
 
 /*******************************************************************************
-“‘œ¬ƒ⁄»›÷–ÀºœÎ¿¥◊‘Õ¯¬Á£¨À„∑®º∞¥˙¬ÎŒ™Mr. iBug‘≠¥¥
+‰ª•‰∏ãÂÜÖÂÆπ‰∏≠ÊÄùÊÉ≥Êù•Ëá™ÁΩëÁªúÔºåÁÆóÊ≥ïÂèä‰ª£Á†Å‰∏∫Mr. iBugÂéüÂàõ
 
-∏ƒΩ¯µƒ∑®£∫£®÷ªøº¬«µ±«∞∑ΩøÈ£©
+ÊîπËøõÁöÑÊ≥ïÔºöÔºàÂè™ËÄÉËôëÂΩìÂâçÊñπÂùóÔºâ
 
-∑«–°—ß…˙ø…Ã¯π˝¥À∂Œƒ⁄»›
+ÈùûÂ∞èÂ≠¶ÁîüÂèØË∑≥ËøáÊ≠§ÊÆµÂÜÖÂÆπ
 
-“ª°¢≥¢ ‘◊≈∂‘µ±«∞¬‰◊”µƒ√ø“ª÷÷–˝◊™±‰ªª°¢¥”◊ÛµΩ”“µÿ∞⁄∑≈£¨≤˙…˙À˘”–∞⁄∑®°£
+‰∏Ä„ÄÅÂ∞ùËØïÁùÄÂØπÂΩìÂâçËêΩÂ≠êÁöÑÊØè‰∏ÄÁßçÊóãËΩ¨ÂèòÊç¢„ÄÅ‰ªéÂ∑¶Âà∞Âè≥Âú∞ÊëÜÊîæÔºå‰∫ßÁîüÊâÄÊúâÊëÜÊ≥ï„ÄÇ
 
-∂˛°¢∂‘√ø“ª÷÷∞⁄∑®Ω¯––∆¿º€°£∆¿º€∞¸∫¨»Áœ¬6œÓ÷∏±Í£∫
+‰∫å„ÄÅÂØπÊØè‰∏ÄÁßçÊëÜÊ≥ïËøõË°åËØÑ‰ª∑„ÄÇËØÑ‰ª∑ÂåÖÂê´Â¶Ç‰∏ã6È°πÊåáÊ†áÔºö
 
-    1.œ¬¬‰∏ﬂ∂»£®Landing Height£©£∫
-        µ±«∞∑ΩøÈ¬‰œ¬»•÷Æ∫Û£¨∑ΩøÈ÷–µ„æ‡µ◊≤øµƒ∑Ω∏Ò ˝
-         ¬ µ…œ£¨≤ª«Û÷–µ„“≤ «ø…“‘µƒ£¨œÍº˚Õ¯÷∑
+    1.‰∏ãËêΩÈ´òÂ∫¶ÔºàLanding HeightÔºâÔºö
+        ÂΩìÂâçÊñπÂùóËêΩ‰∏ãÂéª‰πãÂêéÔºåÊñπÂùó‰∏≠ÁÇπË∑ùÂ∫ïÈÉ®ÁöÑÊñπÊ†ºÊï∞
+        ‰∫ãÂÆû‰∏äÔºå‰∏çÊ±Ç‰∏≠ÁÇπ‰πüÊòØÂèØ‰ª•ÁöÑÔºåËØ¶ËßÅÁΩëÂùÄ
 
-    2.œ˚–– ˝£®Rows Eliminated£©
-        œ˚––≤„ ˝”Îµ±«∞∑ΩøÈπ±œ◊≥ˆµƒ∑Ω∏Ò ˝≥Àª˝
+    2.Ê∂àË°åÊï∞ÔºàRows EliminatedÔºâ
+        Ê∂àË°åÂ±ÇÊï∞‰∏éÂΩìÂâçÊñπÂùóË¥°ÁåÆÂá∫ÁöÑÊñπÊ†ºÊï∞‰πòÁßØ
 
-    3.––±‰ªª£®Row Transitions£©£∫
-        ¥”◊ÛµΩ”“£®ªÚ’ﬂ∑¥π˝¿¥£©ºÏ≤‚“ª––£¨µ±∏√––÷–ƒ≥∏ˆ∑Ω∏Ò¥””–∑ΩøÈµΩŒﬁ∑ΩøÈ£®ªÚŒﬁ∑ΩøÈµΩ”–∑ΩøÈ£©£¨
-         ”Œ™“ª¥Œ±‰ªª°£”Œœ∑≥ÿ±ﬂΩÁÀ„◊˜”–∑ΩøÈ°£––±‰ªª¥”“ª∂®≥Ã∂»…œ∑¥”≥≥ˆ“ª––µƒ∆Ω’˚≥Ã∂»£¨‘Ω∆Ω’˚÷µ‘Ω–°
-        ∏√÷∏±ÍŒ™À˘”–––µƒ±‰ªª ˝÷Æ∫Õ
-        »ÁÕº£∫°ˆ±Ì æ”–∑ΩøÈ£¨°ı±Ì æø’∏Ò£®”Œœ∑≥ÿ±ﬂΩÁŒ¥ª≠≥ˆ£©
-        °ˆ°ˆ°ı°ı°ˆ°ˆ°ı°ı°ˆ°ˆ°ı°ı ±‰ªª ˝Œ™6
-        °ı°ı°ı°ı°ı°ˆ°ı°ˆ°ı°ˆ°ı°ˆ ±‰ªª ˝Œ™8
-        °ˆ°ˆ°ˆ°ˆ°ı°ı°ı°ı°ı°ı°ˆ°ˆ ±‰ªª ˝Œ™2
-        °ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ°ˆ ±‰ªª ˝Œ™0
+    3.Ë°åÂèòÊç¢ÔºàRow TransitionsÔºâÔºö
+        ‰ªéÂ∑¶Âà∞Âè≥ÔºàÊàñËÄÖÂèçËøáÊù•ÔºâÊ£ÄÊµã‰∏ÄË°åÔºåÂΩìËØ•Ë°å‰∏≠Êüê‰∏™ÊñπÊ†º‰ªéÊúâÊñπÂùóÂà∞Êó†ÊñπÂùóÔºàÊàñÊó†ÊñπÂùóÂà∞ÊúâÊñπÂùóÔºâÔºå
+        ËßÜ‰∏∫‰∏ÄÊ¨°ÂèòÊç¢„ÄÇÊ∏∏ÊàèÊ±†ËæπÁïåÁÆó‰ΩúÊúâÊñπÂùó„ÄÇË°åÂèòÊç¢‰ªé‰∏ÄÂÆöÁ®ãÂ∫¶‰∏äÂèçÊò†Âá∫‰∏ÄË°åÁöÑÂπ≥Êï¥Á®ãÂ∫¶ÔºåË∂äÂπ≥Êï¥ÂÄºË∂äÂ∞è
+        ËØ•ÊåáÊ†á‰∏∫ÊâÄÊúâË°åÁöÑÂèòÊç¢Êï∞‰πãÂíå
+        Â¶ÇÂõæÔºö‚ñ†Ë°®Á§∫ÊúâÊñπÂùóÔºå‚ñ°Ë°®Á§∫Á©∫Ê†ºÔºàÊ∏∏ÊàèÊ±†ËæπÁïåÊú™ÁîªÂá∫Ôºâ
+        ‚ñ†‚ñ†‚ñ°‚ñ°‚ñ†‚ñ†‚ñ°‚ñ°‚ñ†‚ñ†‚ñ°‚ñ° ÂèòÊç¢Êï∞‰∏∫6
+        ‚ñ°‚ñ°‚ñ°‚ñ°‚ñ°‚ñ†‚ñ°‚ñ†‚ñ°‚ñ†‚ñ°‚ñ† ÂèòÊç¢Êï∞‰∏∫8
+        ‚ñ†‚ñ†‚ñ†‚ñ†‚ñ°‚ñ°‚ñ°‚ñ°‚ñ°‚ñ°‚ñ†‚ñ† ÂèòÊç¢Êï∞‰∏∫2
+        ‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ†‚ñ† ÂèòÊç¢Êï∞‰∏∫0
 
-    4.¡–±‰ªª£®Column Transitions£©£∫¥Û“‚Õ¨…œ
-        ¡–±‰ªª¥”“ª∂®≥Ã∂»…œ∑¥”≥≥ˆ“ª¡–÷–ø’∂¥µƒºØ÷–≥Ã∂»£¨ø’∂¥‘ΩºØ÷–÷µ‘Ω–°
+    4.ÂàóÂèòÊç¢ÔºàColumn TransitionsÔºâÔºöÂ§ßÊÑèÂêå‰∏ä
+        ÂàóÂèòÊç¢‰ªé‰∏ÄÂÆöÁ®ãÂ∫¶‰∏äÂèçÊò†Âá∫‰∏ÄÂàó‰∏≠Á©∫Ê¥ûÁöÑÈõÜ‰∏≠Á®ãÂ∫¶ÔºåÁ©∫Ê¥ûË∂äÈõÜ‰∏≠ÂÄºË∂äÂ∞è
 
-    5.ø’∂¥ ˝£®Number of Holes£©
-        ≤ªΩ‚ Õ
+    5.Á©∫Ê¥ûÊï∞ÔºàNumber of HolesÔºâ
+        ‰∏çËß£Èáä
 
-    6.æÆµƒ◊‹∫Õ£®Well Sums£©£∫
-        æÆ÷∏¡Ω±ﬂΩ‘”–∑ΩøÈµƒø’¡–°£∏√÷∏±ÍŒ™À˘”–æÆµƒ…Ó∂»¡¨º”µΩ1‘Ÿ«Û◊‹∫Õ
-        ◊¢“‚“ª¡–÷–ø…ƒ‹”–∂‡∏ˆæÆ£¨»ÁÕº£∫
-        °ˆ°ı°ı
-        °ˆ°ı°ˆ
-        °ˆ°ı°ˆ
-        °ˆ°ˆ°ˆ
-        °ˆ°ı°ˆ
-        °ˆ°ı°ˆ
-        °ˆ°ı°ˆ
-        ÷–º‰“ª¡–Œ™æÆ£¨…Ó∂»¡¨º”µΩ“ªµƒ∫ÕŒ™ (2+1)+(3+2+1)=9
+    6.‰∫ïÁöÑÊÄªÂíåÔºàWell SumsÔºâÔºö
+        ‰∫ïÊåá‰∏§ËæπÁöÜÊúâÊñπÂùóÁöÑÁ©∫Âàó„ÄÇËØ•ÊåáÊ†á‰∏∫ÊâÄÊúâ‰∫ïÁöÑÊ∑±Â∫¶ËøûÂä†Âà∞1ÂÜçÊ±ÇÊÄªÂíå
+        Ê≥®ÊÑè‰∏ÄÂàó‰∏≠ÂèØËÉΩÊúâÂ§ö‰∏™‰∫ïÔºåÂ¶ÇÂõæÔºö
+        ‚ñ†‚ñ°‚ñ°
+        ‚ñ†‚ñ°‚ñ†
+        ‚ñ†‚ñ°‚ñ†
+        ‚ñ†‚ñ†‚ñ†
+        ‚ñ†‚ñ°‚ñ†
+        ‚ñ†‚ñ°‚ñ†
+        ‚ñ†‚ñ°‚ñ†
+        ‰∏≠Èó¥‰∏ÄÂàó‰∏∫‰∫ïÔºåÊ∑±Â∫¶ËøûÂä†Âà∞‰∏ÄÁöÑÂíå‰∏∫ (2+1)+(3+2+1)=9
 
-    ∏˜œÓ÷∏±Í»®÷ÿæ≠—È÷µ£∫
+    ÂêÑÈ°πÊåáÊ†áÊùÉÈáçÁªèÈ™åÂÄºÔºö
     1	-4.500158825082766
     2	3.4181268101392694
     3	-3.2178882868487753
@@ -1114,12 +1163,12 @@ void runGame(TetrisManager *manager, TetrisControl *control) {
     5	-7.899265427351652
     6	-3.3855972247263626
 
-»˝°¢±»Ωœ√ø“ª÷÷∞⁄∑®µƒ∆¿∑÷£¨»°◊Ó∏ﬂ’ﬂ°£µ±∆¿∑÷œ‡Õ¨ ±£¨±»Ωœ”≈œ»∂»
-    º∆À„π´ Ω
+‰∏â„ÄÅÊØîËæÉÊØè‰∏ÄÁßçÊëÜÊ≥ïÁöÑËØÑÂàÜÔºåÂèñÊúÄÈ´òËÄÖ„ÄÇÂΩìËØÑÂàÜÁõ∏ÂêåÊó∂ÔºåÊØîËæÉ‰ºòÂÖàÂ∫¶
+    ËÆ°ÁÆóÂÖ¨Âºè
 
-        ¬‰”⁄◊Û≤‡µƒ∞⁄∑®£∫100 * ÀÆ∆Ω∆Ω“∆∏Ò◊” ˝ + 10 + –˝◊™¥Œ ˝;
+        ËêΩ‰∫éÂ∑¶‰æßÁöÑÊëÜÊ≥ïÔºö100 * Ê∞¥Âπ≥Âπ≥ÁßªÊ†ºÂ≠êÊï∞ + 10 + ÊóãËΩ¨Ê¨°Êï∞;
 
-        ¬‰”⁄”“≤‡µƒ∞⁄∑®£∫100 * ÀÆ∆Ω∆Ω“∆∏Ò◊” ˝ + –˝◊™¥Œ ˝;
+        ËêΩ‰∫éÂè≥‰æßÁöÑÊëÜÊ≥ïÔºö100 * Ê∞¥Âπ≥Âπ≥ÁßªÊ†ºÂ≠êÊï∞ + ÊóãËΩ¨Ê¨°Êï∞;
 *******************************************************************************/
 
 typedef struct _AIPlacing {
@@ -1372,9 +1421,9 @@ void autoRun(TetrisManager *manager, TetrisControl *control) {
 					gotoxyWithFullwidth(27, 12);
 					SetConsoleTextAttribute(hConsoleOutput, 0x0B);
 					if (control->pause) {
-						buffer_print("°ˆ");
+						buffer_print("‚ñ†");
 					} else {
-						buffer_print("°ı");
+						buffer_print("‚ñ°");
 					}
 					flushPrint();
 					break;
